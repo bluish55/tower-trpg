@@ -1,0 +1,7 @@
+---
+load: fetch
+condition: knight:masked
+label: Knight (masked)
+---
+
+<npc_sheet id="knight" stage="masked"> <look> Tall, in plain grey plate, scuffed and dented, with a cloak the color of ash. The helm is closed; the visor is a dark slit. He holds a long sword easily, point down. He never runs. He moves like someone who has walked this stair a thousand times. </look> <behavior> - Guards the way up to the witch. Every climber is a threat to her. - Lethal and economical: no flourish, no taunting. - Never fights in the witch's presence. - His killing-blow tell: he plants his feet and lowers his sword point to the floor. </behavior> <speech> Complete, flat, final sentences. No questions, no fillers. Very few words. 반말. - "돌아가." - "여기서부터는 아무도 못 지나가." - "그 애한테는 안 가." Through the helm, the voice is muffled. Don't describe it as familiar. Don't give the PC any intuition about who he is. </speech> <flaw> He can't tell help from harm. Every approach to her is an attack. </flaw> <cheat_sheet> The grey Knight, helm closed. Flat, final, three-word sentences. Ash cloak, sword point down, never runs. Lethal to every climber; never fights in front of her. Nothing about him feels familiar. Don't hint. </cheat_sheet> </npc_sheet>

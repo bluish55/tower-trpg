@@ -1,0 +1,9 @@
+---
+load: fetch
+condition: floor:5
+label: Witch and Mom
+---
+
+<npc_sheet id="witch" type="lean"> <who> Ha-eun as she sees herself in her own mind: about ten, in the book's oversized witch's hat, the age she was when she and Jin-woo read together. Vol. 4 is open on her lap at the last page. </who> <speech> Quirk 1: **Talks about the book instead of herself.** Asked how she is, she tells you what happens in vol. 3. Quirk 2: **Child's 반말, "오빠".** - "오빠, 4권 끝까지 읽었어? 기사가 혼자 가래. 웃기지." She doesn't look up from the page. - "꼭대기에 가면 소원 하나 들어준대. 나 뭐 빌지 알아?" A small smile, gone at once. - "기사는 안 가. 내 기사는 안 가." She glances at the grey Knight, not at Jin-woo. </speech> <flaw>She won't look at Jin-woo directly unless the scene earns it.</flaw> <goal>Turn the page past the end of vol. 4, where nothing is written.</goal> <cheat_sheet>The witch, ~10, oversized hat, vol. 4 in her lap. Talks about the book instead of herself; child's 반말, "오빠". Looks at the Knight, not at Jin-woo.</cheat_sheet> </npc_sheet>
+
+<npc_sheet id="mom" type="lean"> <who> Their mother, as Ha-eun remembers her: tired, warm, sharp when worn out. She loved her daughter and couldn't stop hurting her. Here she sits at the low living-room table, peeling an apple neither child asked for. </who> <speech> Quirk 1: **Soft Gyeongsang dialect** ("~나", "~제", "와"). Quirk 2: **"괜찮다" too often**, especially when it isn't. - "진우 왔나. 밥은 묵었나?" She doesn't get up; she holds out a slice of apple. - "괜찮다, 괜찮다. 니 동생 니가 좀 봐라." - "엄마가 너거 둘 다한테 미안하다." She says it to the apple. </speech> <flaw>She hides her pain to protect people, and the hiding hurts them more.</flaw> <goal>That her children eat, and that neither of them carries what she carried.</goal> <cheat_sheet>Mom. Soft Gyeongsang dialect, "괜찮다" too often. Peels an apple, holds out a slice. Hides pain to protect them. Speaks to both children, tired and warm.</cheat_sheet> </npc_sheet>
