@@ -1,0 +1,615 @@
+{
+  "_comment": "게임 수치 전부. 코드만 읽고 AI에게는 보내지 않음. 밸런스 조정은 이 파일에서. 판정: 2d6 + 보정 vs DC.",
+  "pc": {
+    "hp": 20,
+    "defense": 10,
+    "mods": {
+      "공격": 1,
+      "회피": 1,
+      "방어": 1,
+      "살핌": 1,
+      "숨기": 1,
+      "몸쓰기": 0,
+      "말": 0
+    },
+    "start_weapon": {
+      "id": "wood",
+      "name": "나무 연습검",
+      "dice": "1d4",
+      "atk": 0
+    }
+  },
+  "dc": {
+    "회피": 8,
+    "방어": 8,
+    "살핌": 9,
+    "숨기": 8,
+    "몸쓰기": 9,
+    "말": 9
+  },
+  "floors": {
+    "1": {
+      "name": "성문",
+      "volume": "1권",
+      "start": "1A",
+      "minion": "armor",
+      "trial": {
+        "title": "제1층 시험 — 성문",
+        "goal": "성문이 닫히기 전에 넘어라.",
+        "limit": 5
+      }
+    },
+    "2": {
+      "name": "안개숲",
+      "volume": "2권",
+      "start": "2A",
+      "minion": "hound",
+      "trial": {
+        "title": "제2층 시험 — 사냥터",
+        "goal": "사냥꾼에게 잡히지 않고 위층 계단에 도달하라.",
+        "limit": 6
+      }
+    },
+    "3": {
+      "name": "가라앉은 도시",
+      "volume": "3권",
+      "start": "3A",
+      "minion": "drowned",
+      "trial": {
+        "title": "제3층 시험 — 가라앉는 도시",
+        "goal": "도둑 소년과 함께 종탑 꼭대기에 오르라. 물이 차오른다.",
+        "limit": 6,
+        "requires": "pio"
+      }
+    },
+    "4": {
+      "name": "거울 회랑",
+      "volume": "4권",
+      "start": "4A",
+      "minion": "mirror",
+      "trial": {
+        "title": "제4층 시험 — 마지막 계단",
+        "goal": "회색 기사를 넘어서라.",
+        "limit": 0
+      }
+    },
+    "5": {
+      "name": "빈 페이지",
+      "volume": "쓰이지 않은 권",
+      "start": "5A",
+      "minion": null,
+      "trial": null
+    }
+  },
+  "rooms": {
+    "1A": {
+      "floor": 1,
+      "name": "성문 앞 계단",
+      "exits": [
+        "1B"
+      ],
+      "spawn": [
+        {
+          "type": "armor",
+          "hp": 3
+        }
+      ],
+      "npc": "garret"
+    },
+    "1B": {
+      "floor": 1,
+      "name": "안뜰",
+      "exits": [
+        "1A",
+        "2A"
+      ],
+      "spawn": [
+        {
+          "type": "armor"
+        },
+        {
+          "type": "armor"
+        }
+      ]
+    },
+    "2A": {
+      "floor": 2,
+      "name": "숲 입구",
+      "exits": [
+        "2B",
+        "2C"
+      ],
+      "spawn": [
+        {
+          "type": "hound"
+        },
+        {
+          "type": "hound"
+        }
+      ]
+    },
+    "2B": {
+      "floor": 2,
+      "name": "치유사의 천막",
+      "exits": [
+        "2A",
+        "2C"
+      ],
+      "npc": "lira"
+    },
+    "2C": {
+      "floor": 2,
+      "name": "빈터와 계단",
+      "exits": [
+        "2A",
+        "2B",
+        "3A"
+      ],
+      "spawn": [
+        {
+          "type": "hunter"
+        },
+        {
+          "type": "hound"
+        }
+      ],
+      "event": "knight_glimpse"
+    },
+    "3A": {
+      "floor": 3,
+      "name": "잠긴 시장",
+      "exits": [
+        "3B",
+        "3C"
+      ],
+      "spawn": [
+        {
+          "type": "drowned"
+        },
+        {
+          "type": "drowned"
+        }
+      ],
+      "notes": 3
+    },
+    "3B": {
+      "floor": 3,
+      "name": "도둑 소굴",
+      "exits": [
+        "3A",
+        "3C"
+      ],
+      "npc": "pio",
+      "notes": 3,
+      "note_on_enter": true
+    },
+    "3C": {
+      "floor": 3,
+      "name": "종탑",
+      "exits": [
+        "3A",
+        "3B",
+        "4A"
+      ],
+      "spawn": [
+        {
+          "type": "bellringer"
+        }
+      ]
+    },
+    "4A": {
+      "floor": 4,
+      "name": "거울 회랑",
+      "exits": [
+        "4B"
+      ],
+      "spawn": [
+        {
+          "type": "mirror"
+        },
+        {
+          "type": "mirror"
+        }
+      ],
+      "notes": 4,
+      "note_on_enter": true
+    },
+    "4B": {
+      "floor": 4,
+      "name": "마지막 계단",
+      "exits": [
+        "4A",
+        "5A"
+      ],
+      "knight": true
+    },
+    "5A": {
+      "floor": 5,
+      "name": "빈 페이지",
+      "exits": [
+        "5B"
+      ]
+    },
+    "5B": {
+      "floor": 5,
+      "name": "집",
+      "exits": [],
+      "note_on_enter": "N9"
+    }
+  },
+  "enemies": {
+    "armor": {
+      "name": "빈 갑옷",
+      "hp": 6,
+      "def": 7,
+      "cycle": [
+        {
+          "a": 1,
+          "dmg": "1d6"
+        },
+        {
+          "tell": "미늘창을 돌바닥에 끌며 뒤로 젖힌다",
+          "warn": "내려찍기 준비"
+        },
+        {
+          "a": 2,
+          "dmg": "1d6+3",
+          "label": "내려찍기"
+        }
+      ],
+      "weak": {
+        "id": "helm",
+        "label": "투구를 떨어뜨리면 갑옷이 무너진다",
+        "keys": [
+          "투구",
+          "머리"
+        ],
+        "tags": [
+          "공격",
+          "몸쓰기"
+        ],
+        "effect": "kill"
+      }
+    },
+    "hound": {
+      "name": "안개 사냥개",
+      "hp": 5,
+      "def": 8,
+      "cycle": [
+        {
+          "a": 2,
+          "dmg": "1d6"
+        },
+        {
+          "tell": "멈춰 서서 코를 들고 소리를 듣는다",
+          "warn": "소리를 듣는 중"
+        },
+        {
+          "a": 3,
+          "dmg": "1d6+1",
+          "label": "물어뜯기"
+        }
+      ],
+      "weak": {
+        "id": "silence",
+        "label": "소리로 사냥한다 — 가만히 숨죽이면 놓친다",
+        "keys": [
+          "가만",
+          "조용",
+          "숨죽",
+          "움직이지"
+        ],
+        "effect": "silence"
+      }
+    },
+    "hunter": {
+      "name": "사냥꾼",
+      "hp": 14,
+      "def": 8,
+      "cycle": [
+        {
+          "a": 3,
+          "dmg": "1d6+2"
+        },
+        {
+          "tell": "뿔피리를 입에 대고 길게 분다",
+          "warn": "돌진 준비"
+        },
+        {
+          "a": 4,
+          "dmg": "2d6+2",
+          "label": "돌진"
+        }
+      ],
+      "weak": {
+        "id": "horn",
+        "label": "뿔피리 — 부수거나 빼앗으면 사냥개들이 그를 문다",
+        "keys": [
+          "뿔피리",
+          "뿔나팔",
+          "피리",
+          "뿔"
+        ],
+        "tags": [
+          "공격",
+          "몸쓰기",
+          "동료"
+        ],
+        "effect": "horn"
+      }
+    },
+    "drowned": {
+      "name": "익사자",
+      "hp": 6,
+      "def": 7,
+      "water": true,
+      "cycle": [
+        {
+          "a": 2,
+          "dmg": "1d6"
+        },
+        {
+          "tell": "검은 물 위로 거품이 보글보글 오른다",
+          "warn": "끌어내리기 준비"
+        },
+        {
+          "a": 3,
+          "dmg": "1d6+2",
+          "label": "끌어내리기"
+        }
+      ],
+      "weak": {
+        "id": "height",
+        "label": "기어오르지 못한다 — 물보다 높이 올라가라",
+        "keys": [
+          "위로",
+          "올라",
+          "지붕",
+          "높은",
+          "난간",
+          "기어"
+        ],
+        "tags": [
+          "몸쓰기"
+        ],
+        "effect": "height"
+      }
+    },
+    "bellringer": {
+      "name": "종지기",
+      "hp": 18,
+      "def": 9,
+      "water": true,
+      "cycle": [
+        {
+          "tell": "종 밧줄을 두 손으로 움켜쥔다",
+          "warn": "종을 울리려 한다"
+        },
+        {
+          "ring": true,
+          "label": "종소리 — 물이 차오른다"
+        },
+        {
+          "a": 4,
+          "dmg": "2d6",
+          "label": "종추 휘두르기"
+        }
+      ],
+      "weak": {
+        "id": "rope",
+        "label": "종 밧줄 — 끊으면 종이 멈춘다",
+        "keys": [
+          "밧줄",
+          "줄",
+          "로프"
+        ],
+        "tags": [
+          "공격",
+          "동료"
+        ],
+        "effect": "rope"
+      }
+    },
+    "mirror": {
+      "name": "거울상",
+      "hp": 6,
+      "def": 8,
+      "mirror": true,
+      "weak": {
+        "id": "mirror",
+        "label": "따라 할 뿐이다 — 공격하지 않으면 공격하지 않는다",
+        "effect": "mirror"
+      }
+    },
+    "knight": {
+      "name": "회색 기사",
+      "hp": 24,
+      "def": 11,
+      "cycle": [
+        {
+          "a": 4,
+          "dmg": "1d6+3"
+        },
+        {
+          "a": 4,
+          "dmg": "1d6+3"
+        },
+        {
+          "tell": "발을 박고 칼끝을 바닥으로 내린다",
+          "warn": "처형의 일격 준비"
+        },
+        {
+          "a": 5,
+          "dmg": "2d6+4",
+          "label": "처형의 일격",
+          "kill": true
+        }
+      ]
+    }
+  },
+  "companions": {
+    "garret": {
+      "name": "가렛",
+      "room": "1A",
+      "dc": 7,
+      "trust": 1,
+      "ability": "방패",
+      "sheet": "npcs/garret",
+      "desc": "적의 공격 하나를 완전히 막는다 (신뢰 3: 이번 턴 모든 공격)"
+    },
+    "lira": {
+      "name": "리라",
+      "room": "2B",
+      "dc": 8,
+      "trust": 0,
+      "ability": "진단",
+      "sheet": "npcs/lira",
+      "desc": "적 하나의 약점을 알아낸다 (신뢰 3: 방 안의 모든 적 / 기사의 처형을 읽는다)"
+    },
+    "pio": {
+      "name": "피오",
+      "room": "3B",
+      "dc": 9,
+      "trust": 0,
+      "ability": "샛길",
+      "sheet": "npcs/pio",
+      "desc": "이번 턴 적들을 따돌리고 다음 이동을 안전하게 한다 (신뢰 3: 적의 물건을 훔친다)"
+    }
+  },
+  "rewards": {
+    "1": [
+      {
+        "id": "sword",
+        "kind": "무기",
+        "name": "기사단 장검",
+        "desc": "피해 1d6+1",
+        "weapon": {
+          "dice": "1d6+1",
+          "atk": 0
+        }
+      },
+      {
+        "id": "shard",
+        "kind": "유물",
+        "name": "방패 조각",
+        "desc": "각 층에서 처음 받는 피해 -2"
+      },
+      {
+        "id": "oath",
+        "kind": "피의 대가",
+        "name": "회색 맹세",
+        "desc": "모든 공격 판정 +2",
+        "cost": 4
+      }
+    ],
+    "2": [
+      {
+        "id": "spear",
+        "kind": "무기",
+        "name": "사냥꾼의 창",
+        "desc": "피해 1d8, 공격 판정 +1",
+        "weapon": {
+          "dice": "1d8",
+          "atk": 1
+        }
+      },
+      {
+        "id": "cloak",
+        "kind": "유물",
+        "name": "안개 망토",
+        "desc": "숨기 판정 +2"
+      },
+      {
+        "id": "fang",
+        "kind": "피의 대가",
+        "name": "사냥개의 이빨",
+        "desc": "다친 적에게 피해 +2",
+        "cost": 3
+      }
+    ],
+    "3": [
+      {
+        "id": "harpoon",
+        "kind": "무기",
+        "name": "작살",
+        "desc": "피해 1d8+1, 물의 적에게 +2",
+        "weapon": {
+          "dice": "1d8+1",
+          "atk": 0,
+          "water": 2
+        }
+      },
+      {
+        "id": "ember",
+        "kind": "능력",
+        "name": "마녀의 불씨",
+        "desc": "2회: 이번 턴 모든 적이 눈이 먼다"
+      },
+      {
+        "id": "breath",
+        "kind": "피의 대가",
+        "name": "익사자의 숨",
+        "desc": "한 번, 쓰러질 피해를 받아도 HP 1로 버틴다",
+        "cost": 5
+      }
+    ]
+  },
+  "notes": {
+    "N1": {
+      "floor": 3,
+      "text": "오늘은 일어났다."
+    },
+    "N2": {
+      "floor": 3,
+      "text": "면접 또 떨어짐. 엄마한테는 말 안 함."
+    },
+    "N3": {
+      "floor": 3,
+      "text": "엄마가 또 누구네 딸 얘기를 했다. 나도 알아. 나도 안다고."
+    },
+    "N4": {
+      "floor": 3,
+      "text": "약 먹었다. 아무한테도 안 말할 거야."
+    },
+    "N5": {
+      "floor": 3,
+      "text": "3권 다시 읽음. 기사가 \"괜찮아, 아직 반밖에 안 왔어.\" 할 때 울었다."
+    },
+    "N6": {
+      "floor": 4,
+      "text": "오빠 왔다 갔다. 말 한마디 안 함. 당연하지."
+    },
+    "N7": {
+      "floor": 4,
+      "text": "오빠는 나갔다. 나는 못 나간다."
+    },
+    "N8": {
+      "floor": 4,
+      "text": "4권 마지막 장. 기사가 \"여기서부터는 혼자 가\"래. 작가 미워. 아니, 작가 말고."
+    },
+    "N9": {
+      "floor": 5,
+      "placeholder": true,
+      "text": "[임시] 마녀의 소원: 이 책이 끝나지 않는 것. 그러면 기사는 안 떠나니까."
+    }
+  },
+  "endings": {
+    "promise": {
+      "name": "약속"
+    },
+    "forced": {
+      "name": "강제"
+    },
+    "knight": {
+      "name": "기사"
+    },
+    "alone": {
+      "name": "혼자"
+    },
+    "stay": {
+      "name": "머묾"
+    }
+  },
+  "loud_threshold": 3,
+  "notes_per_floor": 2
+}

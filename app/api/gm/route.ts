@@ -1,78 +1,46 @@
-import Anthropic from '@anthropic-ai/sdk'
+// 메인 GM 호출. 클라이언트(lib/game)가 이미 판정을 끝낸 턴 메시지를 보내면,
+// 서버는 프롬프트 페이지를 붙여 Claude에게 서술만 받아 돌려준다.
 import { NextRequest, NextResponse } from 'next/server'
-import type { RunState } from '@/types/state'
-import type { ResolutionData } from '@/lib/buildResolution'
-import { buildPersistentContext, buildDynamicContext } from '@/lib/buildContext'
-import { buildState } from '@/lib/buildState'
-import { buildResolution } from '@/lib/buildResolution'
+import { persistentContext, dynamicContext } from '@/lib/pages'
+import { callClaude, errorResponse, resolveKey } from '@/lib/anthropic'
 
 interface GMRequestBody {
-  state: RunState
-  resolution: ResolutionData
-  recentHistory: { role: 'player' | 'gm'; text: string }[]
-  playerInput: string            // 선택지 텍스트 또는 자유 입력 원문
-  event?: 'dive_start' | 'expulsion' | null
   apiKey?: string
+  model?: string
+  pages: string[]                                             // 조건부 페이지 id (lib/game/prompt.ts dynamicPages)
+  messages: { role: 'user' | 'assistant'; content: string }[] // 최근 기록 + 이번 턴 메시지
 }
+
+const MAX_MESSAGES = 22
+const MAX_CHARS = 60_000
 
 export async function POST(req: NextRequest) {
   try {
     const body: GMRequestBody = await req.json()
-    const apiKey = body.apiKey ?? process.env.ANTHROPIC_API_KEY
+    const apiKey = resolveKey(body.apiKey)
+    if (!apiKey) return NextResponse.json({ error: 'API 키가 없습니다. 설정에서 Anthropic API 키를 입력해 주세요.' }, { status: 401 })
 
-    if (!apiKey) {
-      return NextResponse.json({ error: 'API key required' }, { status: 401 })
+    const messages = (body.messages ?? []).slice(-MAX_MESSAGES)
+    if (!messages.length || messages[messages.length - 1].role !== 'user') {
+      return NextResponse.json({ error: 'bad request' }, { status: 400 })
+    }
+    if (JSON.stringify(messages).length > MAX_CHARS) {
+      return NextResponse.json({ error: 'request too large' }, { status: 413 })
     }
 
-    const client = new Anthropic({ apiKey })
-
-    // 시스템 프롬프트: persistent(캐싱) + dynamic(비캐싱)
-    const persistentText = buildPersistentContext()
-    const dynamicText = buildDynamicContext(body.state, body.event)
-
-    // 유저 메시지: <state> + <resolution> + 대화 기록 + 플레이어 입력
-    const stateXml = buildState(body.state)
-    const resolutionXml = buildResolution(body.resolution)
-
-    const historyText = body.recentHistory.length > 0
-      ? `Recent history:\n${body.recentHistory.map(h => `[${h.role}]: ${h.text}`).join('\n')}`
-      : ''
-
-    const userContent = [stateXml, resolutionXml, historyText, `Player: ${body.playerInput}`]
-      .filter(Boolean)
-      .join('\n\n')
-
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
-      // persistent 블록에 캐시 마킹 — 내용이 같으면 API가 자동으로 캐시 히트
+    const dyn = dynamicContext(body.pages ?? [])
+    const { text, usage } = await callClaude({
+      apiKey,
+      model: body.model,
       system: [
-        {
-          type: 'text',
-          text: persistentText,
-          cache_control: { type: 'ephemeral' },
-        },
-        ...(dynamicText ? [{
-          type: 'text' as const,
-          text: dynamicText,
-        }] : []),
+        // persistent 블록에 캐시 마킹 — 내용이 같으면 두 번째 호출부터 캐시 히트
+        { type: 'text', text: persistentContext(), cache_control: { type: 'ephemeral' } },
+        ...(dyn.text ? [{ type: 'text' as const, text: dyn.text }] : []),
       ],
-      messages: [{ role: 'user', content: userContent }],
+      messages,
     })
-
-    const output = message.content[0].type === 'text' ? message.content[0].text : ''
-
-    // 캐시 사용 현황 (디버그용)
-    const usage = {
-      input: message.usage.input_tokens,
-      output: message.usage.output_tokens,
-      cache_created: (message.usage as unknown as Record<string, number>).cache_creation_input_tokens ?? 0,
-      cache_read: (message.usage as unknown as Record<string, number>).cache_read_input_tokens ?? 0,
-    }
-
-    return NextResponse.json({ output, usage })
+    return NextResponse.json({ output: text, usage, pages: dyn.loaded })
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
-    return NextResponse.json({ error: msg }, { status: 500 })
+    return errorResponse(e)
   }
 }
