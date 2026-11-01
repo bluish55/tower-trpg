@@ -2,145 +2,106 @@
 
 ## 핵심 설계 결정
 
-**"코드가 판정, AI는 서술만"**
+**AI는 이야기하고, 코드는 결정한다.**
 
-- 플레이어가 선택지를 고르면 코드가 태그를 보고 직접 주사위를 굴리고 결과를 계산한다.
-- AI(Claude)는 그 결과를 받아 서술만 한다. 판정을 AI에게 맡기지 않는다.
-- 이유: AI가 판정까지 하면 일관성이 무너지고 결과를 조작하기 쉬워짐.
+- 플레이어가 선택지를 누르거나 직접 적으면, 코드(`lib/game/engine.ts`)가 주사위·적 행동·시험 시계·보상·결말까지 전부 판정한다.
+- Claude는 판정이 끝난 결과(`<resolution>`)를 받아 **서술과 선택지만** 쓴다. 한 턴에 한 번 호출.
+- Claude가 붙이는 태그(`<trust>`, `<loud>`, `<intents>`)는 "제안"이다. 코드가 검증한 뒤 반영한다 (`Engine.applyAITags`).
+- 모든 수치와 방·적·보상·쪽지 데이터는 `data/game-data.json` 한 파일에 있다. **밸런스 조정은 여기만.**
 
-**프롬프트 아키텍처: persistent 캐시 + dynamic 조건부 로드**
-
-- `data/pages/persistent/` — 매 턴 동일하게 들어가는 문서 (캐싱 대상)
-- `data/pages/floors/`, `npcs/` — 현재 층/동료 상태에 따라 조건부 로드
-- `app/api/gm/route.ts`에서 persistent 블록에 `cache_control: ephemeral` 마킹
-
----
-
-## 턴 흐름 (4단계 Phase)
+## 턴 흐름
 
 ```
-[idle] 선택지 버튼 표시, 입력 대기
-  ↓ 플레이어가 선택지 클릭
-  → resolveAction(tag, target, state)  ← 코드가 주사위 계산
-  → 주사위 있으면 [rolled] + SystemAlert 팝업
-  → 팝업 닫으면 (또는 판정 없으면 즉시)
-[calling_gm] POST /api/gm 호출
-  body: { state, resolution, recentHistory(최근 6개), playerInput, event? }
-  ↓
-[awaiting_apply] GM 응답 완료, 선택지 파싱됨
-  → "상태 반영 + 출력 →" 버튼 클릭
-  → applyStateChanges() + extractNarration()
-[idle] 서술 출력, 새 선택지 표시
+플레이어 입력
+ ├─ 선택지 클릭 → 선택지에 붙은 태그 사용        예: "투구를 노린다 [공격]"
+ └─ 직접 입력   → POST /api/interpret → {tag, arg, intent}
+        ↓
+Engine.resolve(action)          ← 2d6 판정, 적 행동, 시험 턴, 보상 제시, 결말
+        ↓  판정 결과(strip)·시스템 알림을 즉시 화면에 표시
+POST /api/gm  { pages, messages }   ← 서버가 프롬프트 페이지를 붙여 Claude 호출
+        ↓
+parseResponse(output)           ← 서술 / 선택지 / 태그 분리
+Engine.applyAITags(...)         ← 신뢰도·기척·의도 검증 후 반영
+        ↓
+phase 전환: mind → reward(보상 카드) / run_over(추방) / ending(결말)
+localStorage 저장 (진행, 탐사 기록, 설정)
 ```
 
-선택지 없는 응답(결말 등)은 `awaiting_apply` 없이 바로 출력.
+phase: `title → outside(다이브실) → mind(탑 안) ⇄ reward → run_over → (다음 다이브) … → ending`
 
----
+## 판정 (2d6)
+
+`2d6 + 보정 vs 목표(DC)`. 보정·DC는 `data/game-data.json`의 `pc.mods`, `dc`, 적의 `def`.
+
+| 결과 | 조건 |
+|------|------|
+| 대성공 | 합계 ≥ DC+5, 또는 6·6 |
+| 성공 | 합계 > DC |
+| 부분 성공 | 합계 = DC |
+| 실패 | DC−1 ~ DC−3 |
+| 대실패 | DC−4 이하, 또는 1·1 |
+
+`lib/game/engine.ts`의 `tierOf()`.
+
+## 프롬프트 구조 (캐싱)
+
+- `data/pages/persistent/` 7개 — 매 턴 똑같이 보내는 블록. `cache_control: ephemeral`로 캐시된다.
+  내용을 수정하면 **배포 후 첫 호출에서 한 번** 캐시가 새로 만들어질 뿐, 매 턴 미스가 나지 않는다.
+- `data/pages/floors/`, `data/pages/npcs/` — 조건부 페이지. 어떤 페이지를 붙일지는 클라이언트가
+  `dynamicPages()`(`lib/game/prompt.ts`)로 정하고, 서버(`lib/pages.ts`)는 허용 목록에 있는 것만 읽는다.
+- **반전 보호:** `npcs/knight-revealed`(기사의 정체)는 투구에 금이 가기 전(`knight.helm < 1`)에는 절대 보내지 않는다.
+  하은의 쪽지 원문도 프롬프트 페이지가 아니라 게임 데이터에 있고, 공개될 때 `<reveal>`로만 전달된다.
+- 매 턴 user 메시지: `<state>` `<pc_knowledge>` `<resolution>` `<code_notes>` `<reveal>` `<event>` `<player_input>`.
+  대화 기록에는 상태 블록을 뺀 짧은 버전(`historyText`)만 남긴다 (최근 20개 메시지).
 
 ## 파일 역할
 
-### types/
-| 파일 | 역할 |
+| 경로 | 역할 |
 |------|------|
-| `judgment.ts` | CheckType, Attribute, Difficulty, DiceResult |
-| `state.ts` | RunState, Player, CompanionState, EnemyState, StateChangeProposal |
-| `room.ts` | 방 시트 JSON 구조 (아직 실제 데이터 없음) |
-
-### data/
-| 파일/폴더 | 역할 |
-|-----------|------|
-| `rules.ts` | DC표, ACTION_TAG_RULES(태그→판정종류/능력치/난이도), 승인 점수 상수. 밸런스 조정은 여기만 |
-| `pages/persistent/` | 항상 시스템 프롬프트에 포함되는 문서 7개 (캐싱 대상) |
-| `pages/floors/` | floor-1.md ~ floor-5.md, 현재 층일 때만 로드 |
-| `pages/npcs/` | garret/lira/pio/knight-masked/knight-revealed/witch-mom/endings/run-frame.md, 조건부 로드 |
-| `rooms/` | 방 시트 JSON (room_example.json만 있고 실제 데이터 미작성) |
-
-### lib/
-| 파일 | 역할 |
-|------|------|
-| `resolveAction.ts` | 선택지 태그 → ResolutionData. 코드가 판정 결정하는 핵심 |
-| `buildContext.ts` | buildPersistentContext() / buildDynamicContext() |
-| `buildState.ts` | RunState → `<state>` XML |
-| `buildResolution.ts` | ResolutionData → `<resolution>` XML, calcTier() |
-| `parseChanges.ts` | GM 출력에서 XML 태그/선택지/서술 파싱 |
-| `engine.ts` | applyStateChanges() — 신뢰도/HP/소음/발견 반영 |
-| `dice.ts` | rollD20(), resolveCheck() |
-
-### app/
-| 파일 | 역할 |
-|------|------|
-| `page.tsx` | 메인 게임 페이지. Phase 상태 관리, 전체 턴 흐름 |
-| `api/gm/route.ts` | 메인 GM 호출. persistent 캐싱 적용 |
-| `api/judge/route.ts` | 구버전 (현재 미사용) |
-| `api/narrate/route.ts` | 구버전 (현재 미사용) |
-
-### components/
-| 파일 | 역할 |
-|------|------|
-| `ChatWindow.tsx` | GM/플레이어 메시지 출력, 자동 스크롤 |
-| `SystemAlert.tsx` | 판정 결과 팝업 (태그 + 주사위 결과 표시) |
-| `DebugPanel.tsx` | 판정/주사위/raw서술/파싱결과/토큰/캐시히트 표시 |
-| `InputBox.tsx` | 자유 입력창 (현재 미사용) |
-
----
+| `data/game-data.json` | 수치, 방, 적(행동 주기·약점), 동료, 보상 카드, 쪽지, 결말 |
+| `data/pages/**.md` | GM 지침 (프롬프트). frontmatter는 AI에게 보내지 않는다 |
+| `lib/game/types.ts` | 게임 상태·데이터 타입 |
+| `lib/game/engine.ts` | 판정 엔진 (`Engine` 클래스). 순수 TS, 브라우저에서 돈다 |
+| `lib/game/prompt.ts` | 턴 메시지, 조건부 페이지 선택, 자유 입력 분류 프롬프트 |
+| `lib/game/parse.ts` | GM 응답 파싱 (서술/선택지/태그) |
+| `lib/game/storage.ts` | localStorage 저장/불러오기 |
+| `lib/pages.ts` | (서버) 프롬프트 페이지 로더 + 허용 목록 |
+| `lib/anthropic.ts` | (서버) Claude 호출, BYOK 키 처리, 잘린 응답 이어쓰기, 오류 메시지 |
+| `app/api/gm/route.ts` | 메인 GM 호출 |
+| `app/api/interpret/route.ts` | 자유 입력 → 행동 태그 분류 |
+| `app/page.tsx` | 마운트 후 `TowerGame` 렌더 (저장 데이터가 브라우저에 있으므로) |
+| `components/TowerGame.tsx` | 턴 흐름 전체, 화면 구성 |
+| `components/ChatWindow.tsx` | 피드 (서술, 판정 결과, 시스템 알림) |
+| `components/InputBox.tsx` | 선택지 버튼 + 자유 입력 |
+| `components/StatusPanel.tsx` | 시험·HP·적·기척·장비·동료·쪽지 |
+| `components/Overlays.tsx` | 보상, 추방, 결말, 탐사 기록, 설정 |
+| `components/DebugPanel.tsx` | 설정에서 켜면: 상태 JSON, 보낸 메시지, AI 원문, 토큰·캐시 |
 
 ## GM 출력 포맷
-
-GM은 서술 텍스트 + 아래 태그들을 함께 출력한다.
 
 ```
 서술 텍스트...
 
 <trust npc="garret" delta="+1" reason="약속을 지킴" />
 <loud reason="칼 소리" />
-<intents>1:promise,2:speak</intents>
+<intents>1:promise,2:speak</intents>     ← 5층에서만
 
 1. 문을 열고 들어간다 [이동: 2A]
 2. 가렛에게 말을 건다 [말]
 3. 주변을 살핀다 [살핌]
 ```
 
-**선택지 태그 종류** (`data/rules.ts`의 ACTION_TAG_RULES):
-- 판정 있음: `[공격]` `[회피]` `[방어]` `[살핌]` `[숨기]` `[몸쓰기]` `[말]`
-- 판정 없음: `[이동: 방ID]` `[선택]` `[사용: 아이템ID]` `[동료]`
+태그: `공격 회피 방어 살핌 숨기 몸쓰기 말` (판정 있음), `사용 동료 이동 선택` (판정 없음 또는 자동).
+형식을 바꾸려면 `lib/game/parse.ts`와 `data/pages/persistent/game-mechanics.md`를 같이 고칠 것.
 
-**결과 등급** (DC와의 차이):
-- 대성공 +10이상 / 성공 0이상 / 부분_성공 -4이상 / 실패 -9이상 / 대실패
+## 남은 일
 
----
+- N9 (마녀의 소원) 쪽지 문구 — 지금은 자리표시자
+- 5층 엄마 장면, 결말 문구 다듬기
+- 난이도 조정 (`data/game-data.json`)
 
-## RunState 초기값 (app/page.tsx INITIAL_STATE)
+## 검증
 
-```ts
-회차: 1, 현재층: 1, 현재방: '1A', 시험_남은_턴: 3, 소음: 'low', 기사_투구: null
-플레이어: { HP: 20, maxHP: 20, 소지품: [], 능력치: { 매력:1, 지력:0, 지각:1, 민첩:0, 근력:0 }, 현재_무기: '나무검' }
-동료: [], 현재_적: [], 열린_문: [], 발견한_통로: [], 발견한_요소: [], 쓰러진_몬스터: [], 로그: []
+```bash
+npx tsc --noEmit && npm run lint && npm run build
 ```
-
----
-
-## 미완성 항목 (우선순위순)
-
-1. **실제 방 시트 JSON** — `data/rooms/`에 floor-1 기준 방 데이터 작성 필요. `data/rooms/room_example.json`과 `types/room.ts` 참고.
-2. **`/api/interpret`** — 자유 입력 처리. 플레이어 자유 입력 → 태그 변환 → 이하 동일 흐름. `InputBox.tsx`는 이미 있음.
-3. **적 행동 로직 정교화** — 현재 `resolveAction.ts`의 `resolveEnemyActions()`가 랜덤 50% hit. 적 시트 기반으로 교체 필요.
-4. **회차 저장/불러오기** — `RunState`를 localStorage에 직렬화. 회차 시작 시 선택해서 로드.
-5. **API 키 입력 UI** — `app/api/gm/route.ts`에 `body.apiKey` 처리 이미 있음. UI만 추가하면 됨.
-
----
-
-## 건드리지 말아야 할 것
-
-- `data/pages/persistent/` 파일들 — 캐시 대상. 내용 바꾸면 매 턴 캐시 미스 발생.
-- `parseChanges.ts`의 정규식 — GM 프롬프트 포맷과 맞물려 있음. 포맷 바꾸려면 프롬프트도 같이 수정.
-- `calcTier()` 기준값 — 스토리 설계와 연동됨.
-
----
-
-## 환경변수
-
-```
-ANTHROPIC_API_KEY=sk-ant-...
-```
-
-Vercel에도 동일하게 등록되어 있음 (https://tower-trpg.vercel.app).
