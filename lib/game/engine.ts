@@ -482,9 +482,17 @@ export class Engine {
         }
       }
 
-      // 스킬 미발동 + 부상 없음 → 공격 시도
+      // 스킬 미발동 + 부상 없음 → 플레이어 행동 연계 공격 시도
       if (!skillFired && !wasInjured && m.id !== 'lira') {
-        this.companionAttack(m, t)
+        let attackProb = -1
+        if (m.id === 'garret') {
+          if (ctx.tag === '공격' || ctx.tag === '방어') attackProb = [0.50, 0.65, 0.80, 0.95][m.trust]
+        } else if (m.id === 'pio') {
+          if (ctx.tag === '공격') attackProb = [0.50, 0.65, 0.80, 0.95][m.trust]
+          else if (ctx.tag === '방어') attackProb = [0.40, 0.55, 0.70, 0.85][m.trust]
+          else if (ctx.tag === '회피') attackProb = [0.25, 0.33, 0.40, 0.50][m.trust]
+        }
+        if (attackProb >= 0 && Math.random() < attackProb) this.companionAttack(m, t)
       }
     }
 
