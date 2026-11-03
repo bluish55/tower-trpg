@@ -16,7 +16,14 @@ function safe<T>(fn: () => T, fallback: T): T {
 export function loadGame(): Game | null {
   return safe(() => {
     const g = JSON.parse(localStorage.getItem(SAVE_KEY) ?? 'null') as Game | null
-    return g && g.v === 3 ? g : null
+    if (!g || g.v !== 3) return null
+    // PartyMember 필드 마이그레이션 (ready → uses/onCooldown/injured)
+    g.run.party.forEach(p => {
+      if (p.uses === undefined) p.uses = 0
+      if (p.onCooldown === undefined) p.onCooldown = false
+      if (p.injured === undefined) p.injured = false
+    })
+    return g
   }, null)
 }
 export function saveGame(g: Game) {

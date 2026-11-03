@@ -12,7 +12,7 @@
 import gameData from '@/data/game-data.json'
 import type {
   ActionTag, Archive, CompanionId, EndingId, EnemyDef, EnemyInst, EnemyMove, Game, GameData,
-  Intent, PlayerAction, RoomDef, RunState, RunSummary, SysNotice, Tier, Turn,
+  Intent, PartyMember, PlayerAction, RoomDef, RunState, RunSummary, SysNotice, Tier, Turn,
 } from './types'
 import { ACTION_TAGS, INTENTS, TIER_KO } from './types'
 
@@ -373,7 +373,7 @@ export class Engine {
     return Number(m[1]) * Number(m[2]) + (m[3] ? Number(m[3]) : 0)
   }
 
-  private companionAttack(m: import('./types').PartyMember, t: Turn) {
+  private companionAttack(m: PartyMember, t: Turn) {
     const target = this.engaged().find(e => e.type !== 'knight' && !this.def(e).mirror)
     if (!target) return
     const isGarret = m.id === 'garret'
