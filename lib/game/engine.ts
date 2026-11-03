@@ -258,7 +258,7 @@ export class Engine {
   private join(id: CompanionId, t: Turn) {
     const c = D.companions[id]
     if (this.inParty(id)) return
-    this.r.party.push({ id, trust: c.trust, uses: 0, onCooldown: false })
+    this.r.party.push({ id, trust: c.trust, uses: 0, onCooldown: false, injured: false })
     this.r.recruited[id] = true
     t.events.push({ type: 'companion_join', id })
     t.sys.push({ kind: 'join', title: '동료 합류', text: `${c.name} — ${c.ability}: ${c.desc}` })
@@ -329,7 +329,7 @@ export class Engine {
       r.maxFloor = Math.max(r.maxFloor, r.floor)
       r.loud = 0
       r.hidden = false
-      r.party.forEach(p => { p.uses = 0; p.onCooldown = false })
+      r.party.forEach(p => { p.uses = 0; p.onCooldown = false; p.injured = false })
       this.removeKnightInstances()
       if (r.knight.state === 'hunting') r.knight.state = 'unseen'
       const f = D.floors[String(r.floor)]
@@ -373,6 +373,34 @@ export class Engine {
     return Number(m[1]) * Number(m[2]) + (m[3] ? Number(m[3]) : 0)
   }
 
+  private companionAttack(m: import('./types').PartyMember, t: Turn) {
+    const target = this.engaged().find(e => e.type !== 'knight' && !this.def(e).mirror)
+    if (!target) return
+    const isGarret = m.id === 'garret'
+    const hitMod = isGarret ? 1 : 2
+    const dmgSpec = isGarret ? '1d6+1' : '1d8'
+    const label = isGarret ? '가렛' : '피오'
+    const a = d6(), b = d6()
+    const total = a + b + hitMod
+    const tier = tierOf(a, b, total, this.def(target).def)
+    const hit = tier !== 'fail' && tier !== 'critfail'
+    t.lines.push({ who: 'sys', text: `${label} — 공격: 2d6(${a},${b})${sign(hitMod)}=${total} / 방어 ${this.def(target).def} — ${hit ? '적중' : '빗나감'}` })
+    if (hit) this.damageEnemy(target, rollSpec(dmgSpec), t)
+    // 반격: 가렛은 항상, 피오는 대실패시만
+    const counterExposed = isGarret || tier === 'critfail'
+    if (counterExposed) {
+      const mv = this.basicMove(target)
+      const ca = d6(), cb = d6()
+      const ctotal = ca + cb + (mv.a ?? 0)
+      const chit = ca + cb !== 2 && (ca + cb === 12 || ctotal >= D.pc.defense)
+      t.lines.push({ who: 'sys', text: `${this.displayName(target)} 반격 → ${label}: ${chit ? '적중' : '빗나감'}` })
+      if (chit) {
+        m.injured = true
+        t.lines.push({ who: 'sys', text: `${label} — 반격을 맞았다. 다음 턴 쉰다.` })
+      }
+    }
+  }
+
   private companionsAct(ctx: Ctx, t: Turn) {
     const r = this.r
     const kn = this.here().find(e => e.type === 'knight' && e.state === 'engaged')
@@ -381,7 +409,9 @@ export class Engine {
       if (m.uses >= 2) continue // 층당 2회 한도 소진
 
       const wasOnCooldown = m.onCooldown
-      m.onCooldown = false // 이번 턴 행동하면 다시 true로
+      const wasInjured = m.injured
+      m.onCooldown = false
+      m.injured = false
 
       // 발동 조건과 확률 결정
       const engaged = this.engaged()
@@ -391,11 +421,9 @@ export class Engine {
       if (m.id === 'garret') {
         condition = engaged.length > 0
         if (condition) {
-          // 사망 위기: 적 기본 최대 데미지 ≥ 현재 HP
-          const deathRisk = engaged.some(e => {
-            if (e.type === 'knight') return false
-            return r.hp <= this.specMax(this.basicMove(e).dmg ?? '1d6')
-          })
+          const deathRisk = engaged.some(e =>
+            e.type !== 'knight' && r.hp <= this.specMax(this.basicMove(e).dmg ?? '1d6')
+          )
           if (deathRisk) prob = [0.10, 0.30, 0.60, 0.80][m.trust]
         }
       } else if (m.id === 'lira') {
@@ -406,44 +434,56 @@ export class Engine {
 
       if (!condition) continue
 
-      // 쿨다운 돌파 체크 (연속 발동 불가, 단 5% 행운 — 가렛 신뢰 3 사망 위기 시 15%)
-      if (wasOnCooldown) {
-        const deathRisk = m.id === 'garret' && engaged.some(e =>
-          e.type !== 'knight' && r.hp <= this.specMax(this.basicMove(e).dmg ?? '1d6')
-        )
-        const luckyChance = deathRisk && m.trust === 3 ? 0.15 : 0.05
-        if (Math.random() >= luckyChance) continue
+      // 스킬 쿨다운: 5% 행운 돌파
+      if (wasOnCooldown && Math.random() >= 0.05) continue
+
+      // 부상 쿨다운: 가렛만 위급 시 20% 돌파, 나머지는 돌파 불가
+      if (wasInjured) {
+        if (m.id === 'garret') {
+          const deathRisk = engaged.some(e =>
+            e.type !== 'knight' && r.hp <= this.specMax(this.basicMove(e).dmg ?? '1d6')
+          )
+          if (!deathRisk || Math.random() >= 0.20) continue
+        } else {
+          continue
+        }
       }
 
-      // 확률 판정
-      if (Math.random() >= prob) continue
+      // 스킬 확률 판정 및 발동
+      let skillFired = false
+      if (Math.random() < prob) {
+        m.uses++
+        m.onCooldown = true
+        skillFired = true
 
-      // 동료 행동 발동
-      m.uses++
-      m.onCooldown = true
-
-      if (m.id === 'garret') {
-        if (m.trust >= 3) ctx.blockAll = true
-        else ctx.blockOne = true
-        t.lines.push({ who: 'sys', text: `가렛 — 방패${m.trust >= 3 ? ' (이번 턴 모든 공격)' : ''}` })
-        if (kn) r.f4used.garret = true
-      } else if (m.id === 'lira') {
-        const targets = this.here().filter(e => this.def(e).weak && !r.known[this.def(e).weak!.id])
-        const list = m.trust >= 3 ? targets : targets.slice(0, 1)
-        list.forEach(e => this.knowWeak(this.def(e).weak!.id, t))
-        t.lines.push({ who: 'sys', text: '리라 — 진단' })
-      } else if (m.id === 'pio') {
-        const steal = m.trust >= 3 && this.here().find(e => e.state === 'engaged' && (this.def(e).weak?.tags ?? []).includes('동료'))
-        if (steal) {
-          t.lines.push({ who: 'sys', text: '피오 — 훔치기' })
-          this.applyWeak(steal, t)
-        } else {
-          this.here().forEach(e => { if (e.type !== 'knight' && e.state === 'engaged' && !this.def(e).mirror) e.state = 'lost' })
-          r.hidden = true
-          ctx.hideSkip = true
-          t.lines.push({ who: 'sys', text: '피오 — 샛길: 적들을 따돌렸다.' })
+        if (m.id === 'garret') {
+          if (m.trust >= 3) ctx.blockAll = true
+          else ctx.blockOne = true
+          t.lines.push({ who: 'sys', text: `가렛 — 방패${m.trust >= 3 ? ' (이번 턴 모든 공격)' : ''}` })
+          if (kn) r.f4used.garret = true
+        } else if (m.id === 'lira') {
+          const targets = this.here().filter(e => this.def(e).weak && !r.known[this.def(e).weak!.id])
+          const list = m.trust >= 3 ? targets : targets.slice(0, 1)
+          list.forEach(e => this.knowWeak(this.def(e).weak!.id, t))
+          t.lines.push({ who: 'sys', text: '리라 — 진단' })
+        } else if (m.id === 'pio') {
+          const steal = m.trust >= 3 && this.here().find(e => e.state === 'engaged' && (this.def(e).weak?.tags ?? []).includes('동료'))
+          if (steal) {
+            t.lines.push({ who: 'sys', text: '피오 — 훔치기' })
+            this.applyWeak(steal, t)
+          } else {
+            this.here().forEach(e => { if (e.type !== 'knight' && e.state === 'engaged' && !this.def(e).mirror) e.state = 'lost' })
+            r.hidden = true
+            ctx.hideSkip = true
+            t.lines.push({ who: 'sys', text: '피오 — 샛길: 적들을 따돌렸다.' })
+          }
+          if (kn) r.f4used.pio = true
         }
-        if (kn) r.f4used.pio = true
+      }
+
+      // 스킬 미발동 + 부상 없음 → 공격 시도
+      if (!skillFired && !wasInjured && m.id !== 'lira') {
+        this.companionAttack(m, t)
       }
     }
 

@@ -91,7 +91,7 @@
       "spawn": [
         {
           "type": "armor",
-          "hp": 3
+          "hp": 5
         }
       ],
       "npc": "garret"
@@ -240,7 +240,7 @@
   "enemies": {
     "armor": {
       "name": "빈 갑옷",
-      "hp": 6,
+      "hp": 9,
       "def": 7,
       "cycle": [
         {
@@ -273,7 +273,7 @@
     },
     "hound": {
       "name": "안개 사냥개",
-      "hp": 5,
+      "hp": 8,
       "def": 8,
       "cycle": [
         {
@@ -304,7 +304,7 @@
     },
     "hunter": {
       "name": "사냥꾼",
-      "hp": 14,
+      "hp": 21,
       "def": 8,
       "cycle": [
         {
@@ -340,7 +340,7 @@
     },
     "drowned": {
       "name": "익사자",
-      "hp": 6,
+      "hp": 9,
       "def": 7,
       "water": true,
       "cycle": [
@@ -377,7 +377,7 @@
     },
     "bellringer": {
       "name": "종지기",
-      "hp": 18,
+      "hp": 27,
       "def": 9,
       "water": true,
       "cycle": [
@@ -412,7 +412,7 @@
     },
     "mirror": {
       "name": "거울상",
-      "hp": 6,
+      "hp": 9,
       "def": 8,
       "mirror": true,
       "weak": {
@@ -423,7 +423,7 @@
     },
     "knight": {
       "name": "회색 기사",
-      "hp": 24,
+      "hp": 36,
       "def": 11,
       "cycle": [
         {

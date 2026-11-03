@@ -89,7 +89,7 @@ export interface EnemyInst {
   silenced?: boolean
 }
 
-export interface PartyMember { id: CompanionId; trust: number; uses: number; onCooldown: boolean }
+export interface PartyMember { id: CompanionId; trust: number; uses: number; onCooldown: boolean; injured: boolean }
 
 export interface Trial {
   floor: number; title: string; goal: string
