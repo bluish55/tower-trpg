@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import type { Choice } from '@/lib/game/types'
+import gameData from '@/data/game-data.json'
+import type { Choice, GameData } from '@/lib/game/types'
+
+const D = gameData as unknown as GameData
 
 /** 선택지 버튼 + 자유 입력. 자유 입력은 /api/interpret로 태그를 붙인 뒤 엔진이 판정한다. */
 export default function InputBox({ choices, disabled, onChoice, onFree }: {
@@ -34,7 +37,9 @@ export default function InputBox({ choices, disabled, onChoice, onFree }: {
               <span className="flex-1">{c.label}</span>
               {c.tag && (
                 <span className="shrink-0 rounded border border-zinc-700 px-1.5 py-0.5 text-[11px] text-zinc-400 group-hover:border-cyan-700 group-hover:text-cyan-300">
-                  {c.arg ? `${c.tag}: ${c.arg}` : c.tag}
+                  {c.tag === '이동' && c.arg
+                    ? `이동: ${D.rooms[c.arg]?.name ?? c.arg}`
+                    : c.arg ? `${c.tag}: ${c.arg}` : c.tag}
                 </span>
               )}
             </button>
