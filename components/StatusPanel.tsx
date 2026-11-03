@@ -95,7 +95,7 @@ export default function StatusPanel({ game }: { game: Game }) {
               return (
                 <li key={m.id}>
                   <div className="flex justify-between text-xs"><span className="text-zinc-200">{c.name}</span><span className="tracking-widest text-cyan-300">{'●'.repeat(m.trust)}{'○'.repeat(3 - m.trust)}</span></div>
-                  <p className={`text-[11px] ${m.uses < 2 ? 'text-cyan-400' : 'text-zinc-600'}`}>{c.ability} · {m.uses >= 2 ? '이 층에서 소진' : m.onCooldown ? `${m.uses}/2 · 쿨다운` : `${m.uses}/2`}</p>
+                  <p className="text-[11px] text-zinc-500">{c.ability}</p>
                 </li>
               )
             })}
