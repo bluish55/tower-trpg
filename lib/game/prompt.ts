@@ -36,7 +36,8 @@ export function stateBlock(eng: Engine): string {
   L.push(`weapon: ${r.weapon.name} | relics: ${r.relics.join(', ') || 'none'} | powers: ${powers}`)
   const party = r.party.map(p => {
     const c = D.companions[p.id]
-    return `${c.name} [${p.id}] (trust ${p.trust}/3, ${c.ability} ${p.ready ? 'READY' : 'used this floor'})`
+    const status = p.uses >= 2 ? 'floor limit reached' : p.onCooldown ? `${p.uses}/2 uses, cooldown` : `${p.uses}/2 uses`
+    return `${c.name} [${p.id}] (trust ${p.trust}/3, ${c.ability} — ${status})`
   })
   L.push(`party: ${party.length ? party.join('; ') : 'alone'}`)
   if (rm.npc && !eng.inParty(rm.npc)) L.push(`here, not in party: ${D.companions[rm.npc].name} [${rm.npc}] — can be recruited with [말]`)
@@ -152,12 +153,12 @@ export function classifierPrompt(eng: Engine): string {
   const r = eng.r
   const rm = r.room ? D.rooms[r.room] : null
   const exits = rm ? rm.exits.map(x => `${x} ${D.rooms[x].name}`).join(', ') : 'none'
-  const ready = r.party.filter(p => p.ready).map(p => D.companions[p.id].name).join(', ') || 'none'
+  const ready = r.party.filter(p => p.uses < 2).map(p => D.companions[p.id].name).join(', ') || 'none'
   const powers = Object.values(r.powers).filter(p => p.uses > 0).map(p => p.name).join(', ') || 'none'
   const enemies = eng.here().map(e => e.name).join(', ') || 'none'
   const top = r.floor === 5
   return `Classify a player's action in a Korean dungeon game. Reply with JSON only, no prose: {"tag":"...","arg":"...","intent":"..."}
-tag is exactly one of: 공격 (attack), 회피 (dodge), 방어 (brace/block), 살핌 (look closely, study, search), 숨기 (hide, sneak, stay silent), 몸쓰기 (climb, run, jump, force), 말 (talk, persuade, provoke), 사용 (use a power; arg = power name), 동료 (ask a companion to use their ability; arg = companion name), 이동 (go to an exit; arg = exit id like 2B), 선택 (anything else; no risk).
+tag is exactly one of: 공격 (attack), 회피 (dodge), 방어 (brace/block), 살핌 (look closely, study, search), 숨기 (hide, sneak, stay silent), 몸쓰기 (climb, run, jump, force), 말 (talk, persuade, provoke), 사용 (use a power; arg = power name), 이동 (go to an exit; arg = exit id like 2B), 선택 (anything else; no risk).
 Exits: ${exits}. Companions ready: ${ready}. Powers: ${powers}. Enemies: ${enemies}.
 ${top ? "Also set intent: promise (he keeps the promise — takes her the last step / says 꼭대기까지 데려다줄게), speak (talks to her), helm (puts on the knight's helm / takes the knight's place), leave (turns back, leaves), stay (stays with mom), other." : 'Set intent to "other".'}`
 }

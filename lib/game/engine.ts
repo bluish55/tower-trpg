@@ -258,7 +258,7 @@ export class Engine {
   private join(id: CompanionId, t: Turn) {
     const c = D.companions[id]
     if (this.inParty(id)) return
-    this.r.party.push({ id, trust: c.trust, ready: true })
+    this.r.party.push({ id, trust: c.trust, uses: 0, onCooldown: false })
     this.r.recruited[id] = true
     t.events.push({ type: 'companion_join', id })
     t.sys.push({ kind: 'join', title: '동료 합류', text: `${c.name} — ${c.ability}: ${c.desc}` })
@@ -329,7 +329,7 @@ export class Engine {
       r.maxFloor = Math.max(r.maxFloor, r.floor)
       r.loud = 0
       r.hidden = false
-      r.party.forEach(p => { p.ready = true })
+      r.party.forEach(p => { p.uses = 0; p.onCooldown = false })
       this.removeKnightInstances()
       if (r.knight.state === 'hunting') r.knight.state = 'unseen'
       const f = D.floors[String(r.floor)]
@@ -364,6 +364,97 @@ export class Engine {
     this.enterRoom(D.floors['1'].start, t)
     t.events.unshift({ type: this.g.dive === 1 ? 'enter_tower' : 'dive_start' })
     return t
+  }
+
+  /* ---------------- companion auto-actions ---------------- */
+  private specMax(spec: string): number {
+    const m = spec.replace(/\s/g, '').match(/(\d+)d(\d+)([+-]\d+)?/)
+    if (!m) return 0
+    return Number(m[1]) * Number(m[2]) + (m[3] ? Number(m[3]) : 0)
+  }
+
+  private companionsAct(ctx: Ctx, t: Turn) {
+    const r = this.r
+    const kn = this.here().find(e => e.type === 'knight' && e.state === 'engaged')
+
+    for (const m of r.party) {
+      if (m.uses >= 2) continue // 층당 2회 한도 소진
+
+      const wasOnCooldown = m.onCooldown
+      m.onCooldown = false // 이번 턴 행동하면 다시 true로
+
+      // 발동 조건과 확률 결정
+      const engaged = this.engaged()
+      let condition = false
+      let prob = [0.10, 0.30, 0.60, 0.90][m.trust]
+
+      if (m.id === 'garret') {
+        condition = engaged.length > 0
+        if (condition) {
+          // 사망 위기: 적 기본 최대 데미지 ≥ 현재 HP
+          const deathRisk = engaged.some(e => {
+            if (e.type === 'knight') return false
+            return r.hp <= this.specMax(this.basicMove(e).dmg ?? '1d6')
+          })
+          if (deathRisk) prob = [0.10, 0.30, 0.60, 0.80][m.trust]
+        }
+      } else if (m.id === 'lira') {
+        condition = this.here().some(e => this.def(e).weak && !r.known[this.def(e).weak!.id])
+      } else if (m.id === 'pio') {
+        condition = engaged.length > 0
+      }
+
+      if (!condition) continue
+
+      // 쿨다운 돌파 체크 (연속 발동 불가, 단 5% 행운 — 가렛 신뢰 3 사망 위기 시 15%)
+      if (wasOnCooldown) {
+        const deathRisk = m.id === 'garret' && engaged.some(e =>
+          e.type !== 'knight' && r.hp <= this.specMax(this.basicMove(e).dmg ?? '1d6')
+        )
+        const luckyChance = deathRisk && m.trust === 3 ? 0.15 : 0.05
+        if (Math.random() >= luckyChance) continue
+      }
+
+      // 확률 판정
+      if (Math.random() >= prob) continue
+
+      // 동료 행동 발동
+      m.uses++
+      m.onCooldown = true
+
+      if (m.id === 'garret') {
+        if (m.trust >= 3) ctx.blockAll = true
+        else ctx.blockOne = true
+        t.lines.push({ who: 'sys', text: `가렛 — 방패${m.trust >= 3 ? ' (이번 턴 모든 공격)' : ''}` })
+        if (kn) r.f4used.garret = true
+      } else if (m.id === 'lira') {
+        const targets = this.here().filter(e => this.def(e).weak && !r.known[this.def(e).weak!.id])
+        const list = m.trust >= 3 ? targets : targets.slice(0, 1)
+        list.forEach(e => this.knowWeak(this.def(e).weak!.id, t))
+        t.lines.push({ who: 'sys', text: '리라 — 진단' })
+      } else if (m.id === 'pio') {
+        const steal = m.trust >= 3 && this.here().find(e => e.state === 'engaged' && (this.def(e).weak?.tags ?? []).includes('동료'))
+        if (steal) {
+          t.lines.push({ who: 'sys', text: '피오 — 훔치기' })
+          this.applyWeak(steal, t)
+        } else {
+          this.here().forEach(e => { if (e.type !== 'knight' && e.state === 'engaged' && !this.def(e).mirror) e.state = 'lost' })
+          r.hidden = true
+          ctx.hideSkip = true
+          t.lines.push({ who: 'sys', text: '피오 — 샛길: 적들을 따돌렸다.' })
+        }
+        if (kn) r.f4used.pio = true
+      }
+    }
+
+    // 기사 우회 체크
+    const knCheck = this.here().find(e => e.type === 'knight' && e.state === 'engaged')
+    if (knCheck && r.f4used.garret && r.f4used.pio && r.knight.state === 'guarding') {
+      r.knight.state = 'bypassed'
+      knCheck.state = 'bypassed'
+      t.events.push({ type: 'knight_bypassed' })
+      this.log('knight', 'bypassed')
+    }
   }
 
   /* ---------------- enemy actions ---------------- */
@@ -482,6 +573,7 @@ export class Engine {
 
     if (r.pendingSpawn) { r.pendingSpawn = false; this.spawnReinforcement(t) }
     if (r.pendingPioNote && r.floor === 3) { r.pendingPioNote = false; this.revealFloorNote(3, t) }
+    this.companionsAct(ctx, t)
     const silenceKeys = D.enemies.hound.weak?.keys ?? []
     if ((tag === '선택' || tag === '숨기') && silenceKeys.some(k => text.includes(k))) {
       ctx.quiet = true
@@ -605,52 +697,10 @@ export class Engine {
         } else t.codeNotes.push('That power is not available. Treat this as a moment of hesitation.')
         break
       }
-      case '동료': {
-        const id = COMP_ID[(action.arg ?? '').trim()] ??
-          Object.keys(COMP_ID).map(k => (text.includes(k) ? COMP_ID[k] : null)).find(Boolean) ?? null
-        const m = id ? this.member(id) : undefined
-        if (!id || !m || !m.ready) {
-          t.codeNotes.push('That companion cannot act now (not in the party, or their ability is spent on this floor).')
-          break
-        }
-        m.ready = false
-        const kn = this.here().find(e => e.type === 'knight' && e.state === 'engaged')
-        if (id === 'garret') {
-          if (m.trust >= 3) ctx.blockAll = true
-          else ctx.blockOne = true
-          t.lines.push({ who: 'sys', text: `가렛 — 방패${m.trust >= 3 ? ' (이번 턴 모든 공격)' : ''}` })
-          if (kn) r.f4used.garret = true
-        } else if (id === 'lira') {
-          const targets = this.here().filter(e => this.def(e).weak && !r.known[this.def(e).weak!.id])
-          const list = m.trust >= 3 ? targets : targets.slice(0, 1)
-          list.forEach(e => this.knowWeak(this.def(e).weak!.id, t))
-          if (kn && (m.trust >= 3 || !list.length)) {
-            r.knight.read = true
-            t.lines.push({ who: 'sys', text: '리라 — 기사의 처형 동작을 읽었다. 다음 처형의 일격은 빗나간다.' })
-          }
-          if (!list.length && !kn) t.lines.push({ who: 'sys', text: '리라 — 읽어낼 약점이 없다.' })
-          else t.lines.push({ who: 'sys', text: '리라 — 진단' })
-        } else {
-          const steal = m.trust >= 3 && this.here().find(e => e.state === 'engaged' && (this.def(e).weak?.tags ?? []).includes('동료'))
-          if (steal) {
-            t.lines.push({ who: 'sys', text: '피오 — 훔치기' })
-            this.applyWeak(steal, t)
-          } else {
-            this.here().forEach(e => { if (e.type !== 'knight' && e.state === 'engaged' && !this.def(e).mirror) e.state = 'lost' })
-            r.hidden = true
-            ctx.hideSkip = true
-            t.lines.push({ who: 'sys', text: '피오 — 샛길: 적들을 따돌렸다. 다음 이동은 안전하다.' })
-          }
-          if (kn) r.f4used.pio = true
-        }
-        if (kn && r.f4used.garret && r.f4used.pio && r.knight.state === 'guarding') {
-          r.knight.state = 'bypassed'
-          kn.state = 'bypassed'
-          t.events.push({ type: 'knight_bypassed' })
-          this.log('knight', 'bypassed')
-        }
+      case '동료':
+        t.codeNotes.push('Companions act automatically each turn. Treat this as a [선택] moment.')
+        ctx.quiet = true
         break
-      }
       case '이동':
         this.doMove(action.arg ?? '', ctx, t)
         break

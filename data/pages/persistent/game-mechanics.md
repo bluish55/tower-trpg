@@ -39,7 +39,6 @@ Every choice ends with exactly one tag in square brackets. The code reads the ta
 | [몸쓰기] | climb, sprint, jump, force something |
 | [말] | talk, persuade, calm, provoke — in combat: provoke an enemy to redirect attention, shout a warning or coordinate with an ally, attempt to negotiate a pause. Never write a [말] choice as vague "drawing attention" without a clear purpose and target. |
 | [사용: 이름] | use a power from `<state>` |
-| [동료: 이름] | trigger a companion's ability (only if `<state>` says ready) |
 | [이동: 방ID] | go to a listed exit, e.g. [이동: 2B] |
 | [선택] | a pure choice, no roll: a gesture, a word, a decision, standing still |
 
@@ -48,7 +47,7 @@ Rules:
 - In an encounter: at least one [공격], one [회피] or [방어], and one other kind of option. Offer [이동] when fleeing is possible (fleeing gives every enemy a free attack).
 - Outside encounters: offer [이동] for the ways forward, and at least one [선택].
 - The ugly option is tagged like any other.
-- Never offer [사용] or [동료] for something `<state>` doesn't list as available.
+- Never offer [사용] for something `<state>` doesn't list as available.
 - If `<state>` lists a weakness the player knows, you may offer one option that uses it. The PC just does it; don't explain how he knew.
 </choice_tags>
 
