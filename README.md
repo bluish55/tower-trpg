@@ -11,7 +11,7 @@ AI가 GM을 맡는 한국어 텍스트 TRPG 웹앱. 공학설계입문 프로젝
 주사위·적 행동·시험 제한 턴·보상·결말 판정은 전부 코드(`lib/game/engine.ts`)가 먼저 끝내고,
 Claude는 그 결과를 받아 서술과 다음 선택지만 쓴다.
 
-배포: https://tower-trpg.vercel.app
+배포: https://ai-trpg-eight.vercel.app/
 
 ## 실행
 
