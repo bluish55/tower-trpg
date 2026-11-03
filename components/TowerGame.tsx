@@ -70,8 +70,13 @@ export default function TowerGame() {
     saveGame(snap)
   }, [])
 
-  /** 작업용 사본에서 한 턴을 돌린다. 실패하면 턴 시작 전 상태로 되돌린다. */
-  const run = useCallback(async (base: Game, fn: (g: Game) => Promise<void>) => {
+  /** 작업용 사본에서 한 턴을 돌린다. 실패하면 턴 시작 전 상태로 되돌린다.
+   *  retryFn을 넘기면 실패 시 재시도는 fn 대신 retryFn을 쓴다 (주사위 재굴림 방지용). */
+  const run = useCallback(async (
+    base: Game,
+    fn: (g: Game) => Promise<void>,
+    retryFn?: (g: Game) => Promise<void>,
+  ) => {
     if (busyRef.current) return
     busyRef.current = true
     setBusy(true)
@@ -83,7 +88,7 @@ export default function TowerGame() {
       setGame(base)
       setArchive(base.archive)
       saveGame(base)
-      setError({ msg: e instanceof Error ? e.message : String(e), base, fn })
+      setError({ msg: e instanceof Error ? e.message : String(e), base, fn: retryFn ?? fn })
     } finally {
       busyRef.current = false
       setBusy(false)
@@ -185,43 +190,65 @@ export default function TowerGame() {
 
   const playerAct = useCallback((text: string, choice: Choice | null) => {
     if (!game) return
-    void run(game, async g => {
-      if (g.phase === 'run_over') return startNextDive(g, text)
-      if (g.phase === 'outside') {
+    let gMid: Game | null = null
+    let resolvedTurn: Turn | null = null
+    void run(
+      game,
+      async g => {
+        if (g.phase === 'run_over') return startNextDive(g, text)
+        if (g.phase === 'outside') {
+          g.feed.push({ type: 'player', text })
+          g.phase = 'mind'
+          const t = new Engine(g).enterTower()
+          showResolution(g, t)
+          gMid = structuredClone(g); resolvedTurn = t
+          return narrate(g, t, text)
+        }
+        if (g.phase !== 'mind') return
         g.feed.push({ type: 'player', text })
-        g.phase = 'mind'
-        const t = new Engine(g).enterTower()
+        commit(g)
+        const action: PlayerAction = choice?.tag
+          ? { tag: choice.tag, arg: choice.arg, text: choice.label, intent: null }
+          : await classify(g, text)
+        if (g.run.floor === 5) {
+          // 5층: 선택지에 붙은 의도(<intents>)가 우선, 없으면 분류기에게 묻는다
+          const fromChoice = choice ? g.run.intents[choice.n] : undefined
+          action.intent = fromChoice ?? (choice ? (await classify(g, text)).intent : action.intent)
+        }
+        const t = new Engine(g).resolve(action)
         showResolution(g, t)
-        return narrate(g, t, text)
-      }
-      if (g.phase !== 'mind') return
-      g.feed.push({ type: 'player', text })
-      commit(g)
-      const action: PlayerAction = choice?.tag
-        ? { tag: choice.tag, arg: choice.arg, text: choice.label, intent: null }
-        : await classify(g, text)
-      if (g.run.floor === 5) {
-        // 5층: 선택지에 붙은 의도(<intents>)가 우선, 없으면 분류기에게 묻는다
-        const fromChoice = choice ? g.run.intents[choice.n] : undefined
-        action.intent = fromChoice ?? (choice ? (await classify(g, text)).intent : action.intent)
-      }
-      const t = new Engine(g).resolve(action)
-      showResolution(g, t)
-      await narrate(g, t, text)
-    })
+        gMid = structuredClone(g); resolvedTurn = t
+        await narrate(g, t, text)
+      },
+      // narrate만 재시도 — 주사위를 다시 굴리지 않는다
+      async _g => {
+        if (!gMid || !resolvedTurn) throw new Error('판정 결과가 없습니다.')
+        await narrate(structuredClone(gMid), resolvedTurn, text)
+      },
+    )
   }, [game, run, startNextDive, showResolution, narrate, commit, classify])
 
   const pickReward = useCallback((id: string) => {
     if (!game) return
-    void run(game, async g => {
-      const card = (g.run.offer ?? []).find(c => c.id === id)
-      const t = new Engine(g).takeReward(id)
-      if (!card || !t) return
-      g.phase = 'mind'
-      g.feed.push({ type: 'player', text: `보상: ${card.name}` })
-      showResolution(g, t)
-      await narrate(g, t, `(보상 선택: ${card.name})`)
-    })
+    let gMid: Game | null = null
+    let resolvedTurn: Turn | null = null
+    void run(
+      game,
+      async g => {
+        const card = (g.run.offer ?? []).find(c => c.id === id)
+        const t = new Engine(g).takeReward(id)
+        if (!card || !t) return
+        g.phase = 'mind'
+        g.feed.push({ type: 'player', text: `보상: ${card.name}` })
+        showResolution(g, t)
+        gMid = structuredClone(g); resolvedTurn = t
+        await narrate(g, t, `(보상 선택: ${card.name})`)
+      },
+      async _g => {
+        if (!gMid || !resolvedTurn) throw new Error('판정 결과가 없습니다.')
+        await narrate(structuredClone(gMid), resolvedTurn, `(보상 선택: ${id})`)
+      },
+    )
   }, [game, run, showResolution, narrate])
 
   const beginOpening = useCallback((g0: Game) => {
