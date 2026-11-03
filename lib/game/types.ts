@@ -170,7 +170,7 @@ export interface Game {
 export interface TurnLine { who: 'pc' | 'enemy' | 'sys'; text: string }
 export interface SysNotice { kind: 'trial' | 'clear' | 'fail' | 'reward' | 'join' | 'weak' | 'note' | 'trust' | 'info'; title: string; text: string }
 export type GameEvent =
-  | { type: 'opening' | 'enter_tower' | 'dive_start' | 'trial_start' | 'trial_clear' | 'trial_fail' | 'knight_glimpse' | 'knight_confront' | 'helm_crack' | 'helm_shatter' | 'knight_defeated' | 'knight_yields' | 'knight_bypassed' | 'floor5' | 'witch' | 'expelled' }
+  | { type: 'opening' | 'enter_tower' | 'dive_start' | 'dive_outside' | 'trial_start' | 'trial_clear' | 'trial_fail' | 'knight_glimpse' | 'knight_confront' | 'helm_crack' | 'helm_shatter' | 'knight_defeated' | 'knight_yields' | 'knight_bypassed' | 'floor5' | 'witch' | 'expelled' }
   | { type: 'reward_offer'; cards: RewardCard[] }
   | { type: 'reward_taken'; card: RewardCard }
   | { type: 'trial_unclear'; reason: 'clock' | 'requirement' }

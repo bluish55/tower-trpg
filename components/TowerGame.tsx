@@ -177,13 +177,15 @@ export default function TowerGame() {
     commit(g)
   }, [post, commit])
 
-  const startNextDive = useCallback(async (g: Game, text: string) => {
+  // 추방 후 선택지를 고르면 탑 밖 장면을 먼저 거친다 (1회차 opening과 동일한 구조)
+  const startDiveOutside = useCallback(async (g: Game, text: string) => {
     g.dive += 1
     g.run = newRun(g.archive)
     g.history = [] // 진우는 기억하지 못한다. 기억은 탐사 기록(사용자)에만 남는다.
-    g.phase = 'mind'
+    g.phase = 'outside'
     g.feed.push({ type: 'divider', text: `${g.dive}번째 다이브` }, { type: 'player', text })
-    const t = new Engine(g).enterTower()
+    const t = newTurn()
+    t.events.push({ type: 'dive_outside' })
     showResolution(g, t)
     await narrate(g, t, text)
   }, [showResolution, narrate])
@@ -195,7 +197,7 @@ export default function TowerGame() {
     void run(
       game,
       async g => {
-        if (g.phase === 'run_over') return startNextDive(g, text)
+        if (g.phase === 'run_over') return startDiveOutside(g, text)
         if (g.phase === 'outside') {
           g.feed.push({ type: 'player', text })
           g.phase = 'mind'
@@ -226,7 +228,7 @@ export default function TowerGame() {
         await narrate(structuredClone(gMid), resolvedTurn, text)
       },
     )
-  }, [game, run, startNextDive, showResolution, narrate, commit, classify])
+  }, [game, run, startDiveOutside, showResolution, narrate, commit, classify])
 
   const pickReward = useCallback((id: string) => {
     if (!game) return

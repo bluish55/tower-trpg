@@ -80,7 +80,8 @@ function eventText(e: GameEvent, dive: number): string {
   switch (e.type) {
     case 'opening': return 'Dive 1. The PC is outside the mind, in the dive room. Play the first-dive opening from the Run Frame page. Do not enter the tower yet. End with choices about how he goes in (all [선택]).'
     case 'enter_tower': return 'He lies down; the dive begins. Narrate the fall into her mind and his arrival at the foot of the tower (Floor 1, room 1A), in the book\'s opening — and that he is holding a wooden practice sword he does not remember picking up.'
-    case 'dive_start': return `Dive ${dive}. Follow the later-dive opening on the Run Frame page (2–3 sentences in the chair; he remembers nothing from inside), then the fall and arrival at room 1A.`
+    case 'dive_outside': return `Dive ${dive}. He is back in the dive room — he remembers nothing from inside. The player\'s action is in <player_input>. Narrate 3–5 sentences: the chair, the room, how that action lands in his body right now. Do not enter the tower. End with 2–3 choices about lying down again (all [선택]).`
+    case 'dive_start': return `He lies down again. Narrate the fall and arrival at room 1A in 2–3 sentences. Pick up directly from the moment he closes his eyes — no chair scene.`
     case 'trial_start': return 'A new floor begins. The website already shows the trial window. Open the floor from the PC\'s body and make the threat present within this response.'
     case 'trial_clear': return 'The trial is cleared as he reaches the stairs.'
     case 'reward_offer': return `The tower offers three rewards (the website shows them as cards): ${e.cards.map(c => `${c.name} (${c.kind}: ${c.desc}${c.cost ? `, costs ${c.cost} HP` : ''})`).join(' / ')}. Narrate the offering in 2–3 sentences. Write NO numbered choices.`
@@ -133,7 +134,7 @@ export function historyText(t: Turn, playerText: string): string {
 export function dynamicPages(eng: Engine, t: Turn): string[] {
   const r = eng.r, pages: string[] = []
   const ev = t.events.map(e => e.type)
-  if (!r.floor || ev.some(x => ['opening', 'enter_tower', 'dive_start', 'expelled'].includes(x))) pages.push('npcs/run-frame')
+  if (!r.floor || ev.some(x => ['opening', 'enter_tower', 'dive_start', 'dive_outside', 'expelled'].includes(x))) pages.push('npcs/run-frame')
   if (r.floor) pages.push(`floors/floor-${r.floor}`)
   r.party.forEach(p => pages.push(D.companions[p.id].sheet))
   const rm = r.room ? D.rooms[r.room] : null
