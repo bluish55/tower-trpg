@@ -390,8 +390,9 @@ export class Engine {
     const counterExposed = isGarret || tier === 'critfail'
     if (counterExposed) {
       const mv = this.basicMove(target)
+      const counterMod = !isGarret ? 3 : 0 // 피오 대실패: 역보정 +3
       const ca = d6(), cb = d6()
-      const ctotal = ca + cb + (mv.a ?? 0)
+      const ctotal = ca + cb + (mv.a ?? 0) + counterMod
       const chit = ca + cb !== 2 && (ca + cb === 12 || ctotal >= D.pc.defense)
       t.lines.push({ who: 'sys', text: `${this.displayName(target)} 반격 → ${label}: ${chit ? '적중' : '빗나감'}` })
       if (chit) {
