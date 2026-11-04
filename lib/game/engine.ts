@@ -386,8 +386,8 @@ export class Engine {
     const hit = tier !== 'fail' && tier !== 'critfail'
     t.lines.push({ who: 'sys', text: `${label} — 공격: 2d6(${a},${b})${sign(hitMod)}=${total} / 방어 ${this.def(target).def} — ${hit ? '적중' : '빗나감'}` })
     if (hit) this.damageEnemy(target, rollSpec(dmgSpec), t)
-    // 반격: 가렛은 항상, 피오는 대실패시만
-    const counterExposed = isGarret || tier === 'critfail'
+    // 반격: 가렛은 항상, 피오는 대실패시만. 이번 공격으로 쓰러진 적은 반격하지 않는다
+    const counterExposed = target.hp > 0 && (isGarret || tier === 'critfail')
     if (counterExposed) {
       const mv = this.basicMove(target)
       const counterMod = !isGarret ? 3 : 0 // 피오 대실패: 역보정 +3
