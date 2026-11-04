@@ -175,8 +175,14 @@ export function classifierPrompt(eng: Engine): string {
   const powers = Object.values(r.powers).filter(p => p.uses > 0).map(p => p.name).join(', ') || 'none'
   const enemies = eng.here().map(e => e.name).join(', ') || 'none'
   const top = r.floor === 5
-  return `Classify a player's action in a Korean dungeon game. Reply with JSON only, no prose: {"tag":"...","arg":"...","intent":"..."}
+  const owned = [r.weapon.name, ...r.relics, ...Object.values(r.powers).map(p => p.name)].join(', ')
+  const lastGm = [...eng.g.feed].reverse().find(f => f.type === 'gm')
+  const scene = lastGm?.type === 'gm' ? lastGm.text.slice(-600) : 'none' // /api/interpret의 system 4000자 제한 안에서
+  return `Classify a player's action in a Korean dungeon game. Reply with JSON only, no prose: {"tag":"...","arg":"...","intent":"...","missing_item":null,"improvised":null}
 tag is exactly one of: 공격 (attack; if he attacks together with a companion, arg = that companion's name), 회피 (dodge), 방어 (brace/block), 살핌 (look closely, study, search), 숨기 (hide, sneak, stay silent), 몸쓰기 (climb, run, jump, force), 말 (talk, persuade, provoke), 사용 (use a power; arg = power name), 동료 (help a fallen companion back to their feet; arg = name), 떠남 (deliberately leave a companion behind / abandon them; arg = name), 이동 (go to an exit; arg = exit id like 2B), 선택 (anything else; no risk).
 Exits: ${exits}. Companions with him: ${ready}${down ? `. Down: ${down}` : ''}. Powers: ${powers}. Enemies: ${enemies}.
+The PC carries only: ${owned}. Latest scene: """${scene}"""
+missing_item: the object's name if the player claims to hold or use something that is not carried and is not plausibly in the scene, on an enemy, or on a companion. Generic words for the carried weapon (검, 칼) and bare hands are not missing. Otherwise null.
+improvised: only when tag is 공격 and the attack uses an object from the scene instead of the carried weapon: "ranged" if thrown or otherwise from a distance, "melee" if not. Otherwise null.
 ${top ? "Also set intent: promise (he keeps the promise — takes her the last step / says 꼭대기까지 데려다줄게), speak (talks to her), helm (puts on the knight's helm / takes the knight's place), leave (turns back, leaves), stay (stays with mom), other." : 'Set intent to "other".'}`
 }

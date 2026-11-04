@@ -116,6 +116,8 @@ export default function TowerGame() {
         tag: ACTION_TAGS.includes(j.tag) ? j.tag : '선택',
         arg: typeof j.arg === 'string' && j.arg ? j.arg : null,
         intent: INTENTS.includes(j.intent) ? (j.intent as Intent) : 'other',
+        missingItem: typeof j.missing_item === 'string' && j.missing_item.trim() ? j.missing_item.trim() : null,
+        improvised: j.improvised === 'melee' || j.improvised === 'ranged' ? j.improvised : null,
         text,
       }
     } catch {
@@ -209,7 +211,11 @@ export default function TowerGame() {
         g.feed.push({ type: 'player', text })
         commit(g)
         const action: PlayerAction = choice?.tag
-          ? { tag: choice.tag, arg: choice.arg, text: choice.label, intent: null }
+          ? {
+              tag: choice.tag, arg: choice.arg, text: choice.label, intent: null,
+              // GM이 붙인 [공격: 지형] / [공격: 지형 원거리]
+              improvised: choice.arg?.includes('지형') ? (choice.arg.includes('원거리') ? 'ranged' : 'melee') : null,
+            }
           : await classify(g, text)
         if (g.run.floor === 5) {
           // 5층: 선택지에 붙은 의도(<intents>)가 우선, 없으면 분류기에게 묻는다

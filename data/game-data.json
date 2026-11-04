@@ -645,5 +645,6 @@
     }
   },
   "loud_threshold": 3,
-  "notes_per_floor": 2
+  "notes_per_floor": 2,
+  "improvised_penalty": 2
 }

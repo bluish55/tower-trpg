@@ -42,6 +42,8 @@ Every choice ends with exactly one tag in square brackets. The code reads the ta
 |---|---|
 | [공격] | strike with the current weapon |
 | [공격: 이름] | strike together with a companion (가렛/피오/리라): a joint attack — the companion surely joins, the roll is easier, and the enemy's answer may land on that companion |
+| [공격: 지형] | strike up close with an object established in the scene (worse odds than the weapon) |
+| [공격: 지형 원거리] | throw an object established in the scene, or otherwise use it from a distance (worse odds; the code decides whether the target can strike back) |
 | [회피] | dodge, duck, roll away |
 | [방어] | brace, block, absorb |
 | [살핌] | study an enemy, a mechanism, a wall (may reveal a weakness or a note) |
@@ -86,6 +88,10 @@ A companion who is hit while already hurt goes DOWN: alive, unable to stand. If 
 <hp>
 HP never comes back. Nothing in this tower heals: no rest, no potion, no healer (the healer's power is gone). Never narrate recovery. Low HP is narrated vividly, but the PC can still act fully. At 0 HP the code sends expulsion.
 </hp>
+
+<inventory_firewall priority="critical">
+The PC owns only the weapon, relics, and powers listed in `<state>`. If the player claims to hold or use anything else, he reaches for it and finds nothing: the item never appears, and the action does not happen. Never offer a choice that uses an item he does not have. Objects established in the scene may be used.
+</inventory_firewall>
 
 <outputs_to_code>
 After the choices, you may append these tags. The code validates them and ignores anything invalid.

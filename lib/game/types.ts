@@ -11,6 +11,9 @@ export const ACTION_TAGS: ActionTag[] = [
 export type Intent = 'promise' | 'speak' | 'helm' | 'leave' | 'stay' | 'other'
 export const INTENTS: Intent[] = ['promise', 'speak', 'helm', 'leave', 'stay', 'other']
 
+/** 지형지물로 하는 공격: 가까이서(melee) / 던지는 등 멀리서(ranged) */
+export type Improvised = 'melee' | 'ranged'
+
 // 판정 4단계. 부분 성공은 없다 (동점 처리는 game-data.json rules.tie_success)
 export type Tier = 'crit' | 'success' | 'fail' | 'critfail'
 export const TIER_KO: Record<Tier, string> = {
@@ -89,6 +92,7 @@ export interface GameData {
   endings: Record<EndingId, { name: string }>
   loud_threshold: number
   notes_per_floor: number
+  improvised_penalty: number
 }
 
 /* ---------- runtime state ---------- */
@@ -144,6 +148,7 @@ export interface RunState {
   intents: Record<string, Intent>
   f4used: { garret: boolean; pio: boolean }
   kills: number; damageTaken: number
+  lastRangedUid: number | null // 직전 턴에 원거리 지형지물 공격을 받은 적
   log: { t: number; type: string; detail?: string }[]
   /* 11-04 피드백 반영 */
   pages: number                          // 찢긴 책장
@@ -231,4 +236,6 @@ export interface PlayerAction {
   arg?: string | null
   text: string
   intent?: Intent | null
+  missingItem?: string | null   // 갖고 있지 않은 물건을 쓰려 함: 행동이 일어나지 않는다
+  improvised?: Improvised | null
 }

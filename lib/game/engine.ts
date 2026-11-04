@@ -75,7 +75,7 @@ export function newRun(archive: Archive): RunState {
     turn: 0, floorTurn: 0, maxFloor: 0,
     offer: null, pendingMove: null,
     intents: {}, f4used: { garret: false, pio: false },
-    kills: 0, damageTaken: 0, log: [],
+    kills: 0, damageTaken: 0, lastRangedUid: null, log: [],
     pages: 0, prone: false, aid: 0, foresight: false, slain: {},
     left: [], abandoned: [], trustCleared: {}, pendingRoomNote: {},
   }
@@ -107,12 +107,13 @@ interface Ctx {
   rolled: Tier | null            // 이번 턴 진우 판정 결과 (대실패 = 넘어짐)
   resting: CompanionId[]         // 이번 턴 쉬는 동료 (턴 끝에 부상이 풀림)
   jointHit: boolean              // 협공 상대에게 반격이 이미 갔는지
+  noCounterUid: number | null    // 원거리 지형지물 공격의 대상: 이번 턴 되받아치지 못한다
 }
 const newCtx = (tag: ActionTag): Ctx => ({
   tag, dodge: 0, dodgeAll: false, defend: 0, defendAll: false,
   blockOne: false, blockAll: false, blockUsed: false, blind: false, hitBonus: 0,
   quiet: false, silent: false, hideSkip: false, moved: false, struggled: false,
-  joint: null, jointTarget: null, rolled: null, resting: [], jointHit: false,
+  joint: null, jointTarget: null, rolled: null, resting: [], jointHit: false, noCounterUid: null,
 })
 
 /* =========================================================
@@ -693,6 +694,10 @@ export class Engine {
         continue
       }
       const def = this.def(e)
+      if (e.uid === ctx.noCounterUid) {
+        t.lines.push({ who: 'sys', text: `${this.displayName(e)} — 거리가 멀어 되받아치지 못한다.` })
+        continue
+      }
       if (def.mirror) {
         if (ctx.tag === '공격') {
           this.enemyAttack(e, { a: (D.pc.mods['공격'] ?? 0) + (r.weapon.atk ?? 0), dmg: r.weapon.dice, label: '따라 휘두르기' }, ctx, t)
@@ -757,9 +762,14 @@ export class Engine {
   resolve(action: PlayerAction): Turn {
     const r = this.r, t = newTurn()
     const text = action.text ?? ''
-    const tag: ActionTag = ACTION_TAGS.includes(action.tag) ? action.tag : '선택'
+    // 없는 물건을 쓰려 하면 판정 없이 턴만 흐른다. 공격 연계·거울상 복사가 일어나지 않게 [선택]으로 둔다
+    const missing = action.missingItem?.trim() || null
+    const missingNote = `The PC tries to use "${missing}", but he does not have it. Show him reaching for it and finding nothing. The action does not happen. Do not let the item appear.`
+    const tag: ActionTag = missing ? '선택' : ACTION_TAGS.includes(action.tag) ? action.tag : '선택'
     r.turn++
     r.floorTurn++
+    const prevRangedUid = r.lastRangedUid
+    r.lastRangedUid = null
     const ctx = newCtx(tag)
     t.action = { tag, arg: action.arg ?? null, text }
 
@@ -779,13 +789,14 @@ export class Engine {
     }
     this.companionsAct(ctx, t)
     const silenceKeys = D.enemies.hound.weak?.keys ?? []
-    if ((tag === '선택' || tag === '숨기') && silenceKeys.some(k => text.includes(k))) {
+    if (!missing && (tag === '선택' || tag === '숨기') && silenceKeys.some(k => text.includes(k))) {
       ctx.quiet = true
       ctx.silent = true
     }
 
     /* ---- top floor: endings ---- */
     if (r.floor === 5) {
+      if (missing) { t.codeNotes.push(missingNote); return t }
       const intent: Intent = action.intent && INTENTS.includes(action.intent) ? action.intent : 'other'
       t.intent = intent
       this.log('intent', intent)
@@ -801,12 +812,20 @@ export class Engine {
     }
 
     /* ---- player action ---- */
-    switch (tag) {
+    if (missing) t.codeNotes.push(missingNote)
+    else switch (tag) {
       case '공격': {
         const e = ctx.jointTarget ?? this.findTarget(text)
         if (!e) { this.check('공격', 8, 0, t, undefined, ctx); t.codeNotes.push('There is nothing here to strike.'); break }
-        const bonus = ctx.joint ? D.rules.joint_bonus : 0
-        const label = `${this.displayName(e)} 공격${ctx.joint ? ` (${josa(D.companions[ctx.joint].name, '과', '와')} 협공)` : ''}`
+        const improvised = action.improvised ?? null
+        const ranged = improvised === 'ranged'
+        // 기사는 곧바로 다가온다. 다른 적도 같은 대상에게 연속으로 던지면 거리를 좁혀 온다
+        const keptAway = ranged && e.type !== 'knight' && prevRangedUid !== e.uid
+        if (ranged) r.lastRangedUid = e.uid
+        if (keptAway) ctx.noCounterUid = e.uid
+        if (improvised) t.codeNotes.push(`The PC attacks with an object from the scene, not his weapon${!ranged ? '' : keptAway ? ', from a distance. The target cannot strike back this turn' : ', from a distance. The target closes the gap and acts as usual this turn'}.`)
+        const bonus = improvised ? -D.improvised_penalty : ctx.joint ? D.rules.joint_bonus : 0
+        const label = `${this.displayName(e)} ${improvised ? '지형지물 ' : ''}공격${ctx.joint ? ` (${josa(D.companions[ctx.joint].name, '과', '와')} 협공)` : ''}`
         const res = this.check('공격', this.def(e).def, bonus, t, label, ctx)
         this.exposure(res.tier, true, ctx, t)
         if (!res.ok) break
@@ -814,7 +833,7 @@ export class Engine {
         if (this.weakMatch(e, '공격', text)) { this.applyWeak(e, t); break }
         let dmg = rollSpec(r.weapon.dice)
         if (r.flags.fang && e.hp < e.max) dmg += 2
-        if (r.weapon.water && this.def(e).water) dmg += r.weapon.water
+        if (!improvised && r.weapon.water && this.def(e).water) dmg += r.weapon.water
         if (res.tier === 'crit') dmg += 4
         this.damageEnemy(e, dmg, t)
         break
