@@ -26,7 +26,7 @@ export function parseTag(text: string): { tag: ActionTag; arg: string | null; la
 export function parseResponse(raw: string): ParsedResponse {
   const out: ParsedResponse = { prose: '', choices: [], trust: [], loud: false, intents: {} }
 
-  for (const m of raw.matchAll(/<trust\s+npc="(garret|lira|pio)"\s+delta="([+-]?\d)"(?:\s+reason="([^"]*)")?[^>]*\/?>/g)) {
+  for (const m of raw.matchAll(/<trust\s+npc="(garret|lira|pio)"\s+delta="([+-]?\d+)"(?:\s+reason="([^"]*)")?[^>]*\/?>/g)) {
     out.trust.push({ npc: m[1] as CompanionId, delta: Number(m[2]), reason: m[3] ?? '' })
   }
   if (/<loud[^>]*\/?>/.test(raw)) out.loud = true

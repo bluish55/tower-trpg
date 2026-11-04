@@ -19,6 +19,7 @@ export const TIER_KO: Record<Tier, string> = {
 export type CompanionId = 'garret' | 'lira' | 'pio'
 export type EndingId = 'promise' | 'forced' | 'knight' | 'alone' | 'stay'
 export type KnightState = 'unseen' | 'hunting' | 'guarding' | 'yielded' | 'bypassed' | 'defeated'
+export const SAFE_KNIGHT: KnightState[] = ['yielded', 'bypassed', 'defeated']
 export type Phase = 'title' | 'outside' | 'mind' | 'reward' | 'run_over' | 'ending'
 
 /* ---------- game data (data/game-data.json) ---------- */

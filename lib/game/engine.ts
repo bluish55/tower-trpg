@@ -14,12 +14,11 @@ import type {
   ActionTag, Archive, CompanionId, EndingId, EnemyDef, EnemyInst, EnemyMove, Game, GameData,
   Intent, PartyMember, PlayerAction, RoomDef, RunState, RunSummary, SysNotice, Tier, Turn,
 } from './types'
-import { ACTION_TAGS, INTENTS, TIER_KO } from './types'
+import { ACTION_TAGS, INTENTS, SAFE_KNIGHT, TIER_KO } from './types'
 
 export const D = gameData as unknown as GameData
 
 const COMP_ID: Record<string, CompanionId> = { '가렛': 'garret', '리라': 'lira', '피오': 'pio' }
-const SAFE_KNIGHT = ['yielded', 'bypassed', 'defeated']
 
 /* ---------------- dice (2d6) ---------------- */
 function rnd(n: number): number {
@@ -110,7 +109,7 @@ export class Engine {
   constructor(public g: Game) {}
 
   get r(): RunState { return this.g.run }
-  room(): RoomDef { return D.rooms[this.r.room as string] }
+  room(): RoomDef { if (!this.r.room) throw new Error('room() called with null room'); return D.rooms[this.r.room] }
   inParty(id: CompanionId) { return this.r.party.some(p => p.id === id) }
   member(id: CompanionId) { return this.r.party.find(p => p.id === id) }
   here(): EnemyInst[] { return (this.r.enemies[this.r.room ?? ''] ?? []).filter(e => e.hp > 0) }

@@ -6,8 +6,7 @@
    ========================================================= */
 import { D, Engine } from './engine'
 import type { GameEvent, Turn } from './types'
-
-const SAFE_KNIGHT = ['yielded', 'bypassed', 'defeated']
+import { SAFE_KNIGHT } from './types'
 
 export function stateBlock(eng: Engine): string {
   const g = eng.g, r = eng.r, L: string[] = []
