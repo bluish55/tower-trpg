@@ -563,6 +563,7 @@ export class Engine {
           this.knowWeak('mirror', t)
           if (e.calm >= 2) {
             e.hp = 0
+            r.kills++
             t.lines.push({ who: 'sys', text: `${this.displayName(e)} — 따라 할 것이 없자 흐려져 사라진다.` })
           } else t.lines.push({ who: 'sys', text: `${this.displayName(e)} — 진우를 따라 멈춰 선다.` })
         }
