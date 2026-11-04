@@ -2,7 +2,7 @@
   "_comment": "게임 수치 전부. 코드만 읽고 AI에게는 보내지 않음. 밸런스 조정은 이 파일에서. 판정: 2d6 + 보정 vs DC.",
   "pc": {
     "hp": 20,
-    "defense": 10,
+    "defense": 9,
     "mods": {
       "공격": 1,
       "회피": 1,
@@ -28,11 +28,11 @@
     "말": 9
   },
   "rules": {
-    "_comment": "판정 4단계(대성공/성공/실패/대실패). 실패의 대가와 이탈·동료·책장 수치.",
+    "_comment": "판정 4단계(대성공/성공/실패/대실패). 수치는 11-04 시뮬레이션(숙련 봇 4층 도착 HP ≈13, 초보 봇 1–3층 추방 ≈95%)으로 맞춤.",
     "tie_success": true,
     "opening_bonus": 2,
     "prone_penalty": 2,
-    "disengage_dc": 8,
+    "disengage_dc": 7,
     "pages_per_extra_card": 3,
     "companion_target_chance": 0.25,
     "joint_bonus": 2,
@@ -52,7 +52,7 @@
       "trial": {
         "title": "제1층 시험 — 성문",
         "goal": "성문이 닫히기 전에 넘어라.",
-        "limit": 5,
+        "limit": 7,
         "kind": "reach"
       }
     },
@@ -64,7 +64,7 @@
       "trial": {
         "title": "제2층 시험 — 사냥",
         "goal": "사냥꾼을 쓰러뜨리고 위층 계단에 올라라.",
-        "limit": 6,
+        "limit": 8,
         "kind": "slay",
         "target": "hunter"
       }
@@ -266,7 +266,7 @@
       "cycle": [
         {
           "a": 1,
-          "dmg": "1d6"
+          "dmg": "1d6+1"
         },
         {
           "tell": "미늘창을 돌바닥에 끌며 뒤로 젖힌다",
@@ -300,7 +300,7 @@
       "cycle": [
         {
           "a": 2,
-          "dmg": "1d6"
+          "dmg": "1d6+1"
         },
         {
           "tell": "멈춰 서서 코를 들고 소리를 듣는다",
@@ -370,7 +370,7 @@
       "cycle": [
         {
           "a": 2,
-          "dmg": "1d6"
+          "dmg": "1d6+1"
         },
         {
           "tell": "검은 물 위로 거품이 보글보글 오른다",

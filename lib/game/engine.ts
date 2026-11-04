@@ -704,8 +704,9 @@ export class Engine {
           e.calm++
           this.knowWeak('mirror', t)
           if (e.calm >= 2) {
-            e.hp = 0
             t.lines.push({ who: 'sys', text: `${this.displayName(e)} — 따라 할 것이 없자 흐려져 사라진다.` })
+            e.hp = 0
+            this.onKill(e, t, false)
           } else t.lines.push({ who: 'sys', text: `${this.displayName(e)} — 진우를 따라 멈춰 선다.` })
         }
         continue
@@ -809,7 +810,7 @@ export class Engine {
         const e = ctx.jointTarget ?? this.findTarget(text)
         if (!e) { this.check('공격', 8, 0, t, undefined, ctx); t.codeNotes.push('There is nothing here to strike.'); break }
         const bonus = ctx.joint ? D.rules.joint_bonus : 0
-        const label = `${this.displayName(e)} 공격${ctx.joint ? ` (${D.companions[ctx.joint].name}와 협공)` : ''}`
+        const label = `${this.displayName(e)} 공격${ctx.joint ? ` (${josa(D.companions[ctx.joint].name, '과', '와')} 협공)` : ''}`
         const res = this.check('공격', this.def(e).def, bonus, t, label, ctx)
         this.exposure(res.tier, true, ctx, t)
         if (!res.ok) break
@@ -1002,8 +1003,9 @@ export class Engine {
       return
     }
     // 교전 중에 빠져나가려면 이탈 판정 (회피). 숨은 상태·피오의 샛길이면 판정 없이 나간다.
+    // 시험 실패로 내려온 기사(hunting)는 느리게 뒤따라올 뿐 길을 막지 않는다 — 도망쳐서 계단을 오르는 게 살 길
     const blockers = this.engaged().filter(e =>
-      !this.def(e).mirror && e.stunned <= 0 && !(e.type === 'knight' && SAFE_KNIGHT.includes(r.knight.state)))
+      !this.def(e).mirror && e.stunned <= 0 && !(e.type === 'knight' && (SAFE_KNIGHT.includes(r.knight.state) || r.knight.state === 'hunting')))
     if (!r.hidden && blockers.length) {
       const pio = this.member('pio')
       const extra = pio && !pio.down && pio.trust >= 3 ? 2 : 0
