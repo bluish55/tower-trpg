@@ -22,7 +22,13 @@ export function loadGame(): Game | null {
       if (p.uses === undefined) p.uses = 0
       if (p.onCooldown === undefined) p.onCooldown = false
       if (p.injured === undefined) p.injured = false
+      if (p.down === undefined) p.down = false
     })
+    // 11-04 피드백 반영 필드 (구 세이브)
+    const r = g.run as Partial<typeof g.run> & typeof g.run
+    r.pages ??= 0; r.prone ??= false; r.aid ??= 0; r.foresight ??= false; r.slain ??= {}
+    r.left ??= []; r.abandoned ??= []; r.trustCleared ??= {}; r.pendingRoomNote ??= {}
+    if (r.trial) { r.trial.kind ??= 'reach'; r.trial.target ??= null }
     return g
   }, null)
 }
