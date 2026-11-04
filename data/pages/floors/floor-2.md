@@ -32,7 +32,7 @@ The hit: teeth through the calf, a wet shake, the leg going hot then cold.
 </enemy>
 
 <enemy id="hunter" name="사냥꾼" tier="elite">
-Look: very tall, in a mask made of antlers, a long spear, a curled horn on a cord at his chest. In the book he was a villain the knight never fully beat.
+Look: very tall, in a mask made of antlers, a long spear, a curled horn on a cord at his chest. In the book he was a villain the knight never fully beat. **This floor's trial is to hunt him** (사냥): the hunted turns hunter. The trial clears only if the hunter is down when the PC climbs.
 Pattern: spear thrusts; the tell — he raises the horn and blows one long note that shakes the fog — then a charge.
 The hit: a spear through the fog, felt before it's seen.
 </enemy>
@@ -44,6 +44,8 @@ When the PC first reaches 2C: at the top of the stairs, through a gap in the fog
 <beats>
 - If Garret is in the party: this is the floor where he dies in the book. Only Jin-woo knows. Garret is louder and braver here than anywhere else.
 - Lira's tent is a choice: time against an ally.
+- The trial flips the floor: in vol. 2 the knight is chased through this fog. Here he has to turn and go after the thing chasing him. Let the PC feel the moment he decides to stop running.
+- If he climbs with the hunter still standing, the tower gives him nothing, and the horn sounds once more behind him.
 </beats>
 
 </floor>

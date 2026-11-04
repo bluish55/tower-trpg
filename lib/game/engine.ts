@@ -1144,6 +1144,19 @@ export class Engine {
     }
   }
 
+  /** 화면용: 적의 다음 행동 (리라 신뢰 3일 때 상태 패널에 보인다) */
+  nextMoveKo(e: EnemyInst): string {
+    const def = this.def(e)
+    if (def.mirror) return '진우를 따라 한다'
+    if (e.warn) return e.warn
+    const cyc = def.cycle ?? []
+    const mv = cyc[e.step % cyc.length]
+    if (!mv) return '기다린다'
+    if (mv.tell) return mv.warn ?? '큰 동작을 준비하려 한다'
+    if (mv.ring) return '종을 울리려 한다'
+    return '공격하려 한다'
+  }
+
   nextMoveText(e: EnemyInst): string {
     const def = this.def(e)
     if (def.mirror) return 'copies whatever the PC does; if the PC does not attack, it does not attack'

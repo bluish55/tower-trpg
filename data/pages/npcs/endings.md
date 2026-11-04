@@ -18,6 +18,11 @@ After: the dive room. Her fingers move on the blanket. Her eyes find him. Neithe
 Last line — Ha-eun, hoarse: something small about the book.
 </ending>
 
+<ending id="promise_together" name="약속 — 함께">
+The promise ending, exactly as above, with one more beat in the moment: when the white fills with handwriting, the first lines written are the companions' names — 가렛, 리라, 피오 — as if she is finally writing the volume where they are still there. Back at the threshold, the three of them are visible at the edge of the page, not following, watching her go up. She sees them, and looks at Jin-woo for the first time without looking away. (draft — 경택 to revise)
+After and last line: as in 약속.
+</ending>
+
 <ending id="forced" name="강제">
 The Knight is gone; nothing stands between them. He pulls her up by force of will, and she wakes because he made her, not because she was ready.
 After: she's awake, and nothing is fixed. She looks at him like a stranger who broke in.
