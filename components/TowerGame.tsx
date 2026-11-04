@@ -223,32 +223,34 @@ export default function TowerGame() {
         await narrate(g, t, text)
       },
       // narrate만 재시도 — 주사위를 다시 굴리지 않는다
-      async _g => {
+      async () => {
         if (!gMid || !resolvedTurn) throw new Error('판정 결과가 없습니다.')
         await narrate(structuredClone(gMid), resolvedTurn, text)
       },
     )
   }, [game, run, startDiveOutside, showResolution, narrate, commit, classify])
 
-  const pickReward = useCallback((id: string) => {
-    if (!game) return
+  const pickReward = useCallback((ids: string[]) => {
+    if (!game || !ids.length) return
     let gMid: Game | null = null
     let resolvedTurn: Turn | null = null
+    let names = ''
     void run(
       game,
       async g => {
-        const card = (g.run.offer ?? []).find(c => c.id === id)
-        const t = new Engine(g).takeReward(id)
-        if (!card || !t) return
+        const cards = ids.map(id => (g.run.offer ?? []).find(c => c.id === id)).filter(c => !!c)
+        const t = new Engine(g).takeReward(ids[0], ids[1])
+        if (!cards.length || !t) return
+        names = t.events.flatMap(e => (e.type === 'reward_taken' ? [e.card.name] : [])).join(', ')
         g.phase = 'mind'
-        g.feed.push({ type: 'player', text: `보상: ${card.name}` })
+        g.feed.push({ type: 'player', text: `보상: ${names}` })
         showResolution(g, t)
         gMid = structuredClone(g); resolvedTurn = t
-        await narrate(g, t, `(보상 선택: ${card.name})`)
+        await narrate(g, t, `(보상 선택: ${names})`)
       },
-      async _g => {
+      async () => {
         if (!gMid || !resolvedTurn) throw new Error('판정 결과가 없습니다.')
-        await narrate(structuredClone(gMid), resolvedTurn, `(보상 선택: ${id})`)
+        await narrate(structuredClone(gMid), resolvedTurn, `(보상 선택: ${names})`)
       },
     )
   }, [game, run, showResolution, narrate])

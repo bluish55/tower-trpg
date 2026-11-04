@@ -2,7 +2,7 @@
   "_comment": "게임 수치 전부. 코드만 읽고 AI에게는 보내지 않음. 밸런스 조정은 이 파일에서. 판정: 2d6 + 보정 vs DC.",
   "pc": {
     "hp": 20,
-    "defense": 10,
+    "defense": 9,
     "mods": {
       "공격": 1,
       "회피": 1,
@@ -27,6 +27,22 @@
     "몸쓰기": 9,
     "말": 9
   },
+  "rules": {
+    "_comment": "판정 4단계(대성공/성공/실패/대실패). 수치는 11-04 시뮬레이션(숙련 봇 4층 도착 HP ≈13, 초보 봇 1–3층 추방 ≈95%)으로 맞춤.",
+    "tie_success": true,
+    "opening_bonus": 2,
+    "prone_penalty": 2,
+    "disengage_dc": 7,
+    "pages_per_extra_card": 3,
+    "companion_target_chance": 0.25,
+    "joint_bonus": 2,
+    "lira_aid_chance": [
+      0.3,
+      0.5,
+      0.7,
+      0.9
+    ]
+  },
   "floors": {
     "1": {
       "name": "성문",
@@ -36,7 +52,8 @@
       "trial": {
         "title": "제1층 시험 — 성문",
         "goal": "성문이 닫히기 전에 넘어라.",
-        "limit": 5
+        "limit": 7,
+        "kind": "reach"
       }
     },
     "2": {
@@ -45,9 +62,11 @@
       "start": "2A",
       "minion": "hound",
       "trial": {
-        "title": "제2층 시험 — 사냥터",
-        "goal": "사냥꾼에게 잡히지 않고 위층 계단에 도달하라.",
-        "limit": 6
+        "title": "제2층 시험 — 사냥",
+        "goal": "사냥꾼을 쓰러뜨리고 위층 계단에 올라라.",
+        "limit": 8,
+        "kind": "slay",
+        "target": "hunter"
       }
     },
     "3": {
@@ -59,7 +78,8 @@
         "title": "제3층 시험 — 가라앉는 도시",
         "goal": "도둑 소년과 함께 종탑 꼭대기에 오르라. 물이 차오른다.",
         "limit": 6,
-        "requires": "pio"
+        "requires": "pio",
+        "kind": "escort"
       }
     },
     "4": {
@@ -70,7 +90,8 @@
       "trial": {
         "title": "제4층 시험 — 마지막 계단",
         "goal": "회색 기사를 넘어서라.",
-        "limit": 0
+        "limit": 0,
+        "kind": "reach"
       }
     },
     "5": {
@@ -245,7 +266,7 @@
       "cycle": [
         {
           "a": 1,
-          "dmg": "1d6"
+          "dmg": "1d6+1"
         },
         {
           "tell": "미늘창을 돌바닥에 끌며 뒤로 젖힌다",
@@ -269,7 +290,8 @@
           "몸쓰기"
         ],
         "effect": "kill"
-      }
+      },
+      "pages": 1
     },
     "hound": {
       "name": "안개 사냥개",
@@ -278,7 +300,7 @@
       "cycle": [
         {
           "a": 2,
-          "dmg": "1d6"
+          "dmg": "1d6+1"
         },
         {
           "tell": "멈춰 서서 코를 들고 소리를 듣는다",
@@ -300,7 +322,8 @@
           "움직이지"
         ],
         "effect": "silence"
-      }
+      },
+      "pages": 1
     },
     "hunter": {
       "name": "사냥꾼",
@@ -336,7 +359,8 @@
           "동료"
         ],
         "effect": "horn"
-      }
+      },
+      "pages": 2
     },
     "drowned": {
       "name": "익사자",
@@ -346,7 +370,7 @@
       "cycle": [
         {
           "a": 2,
-          "dmg": "1d6"
+          "dmg": "1d6+1"
         },
         {
           "tell": "검은 물 위로 거품이 보글보글 오른다",
@@ -373,7 +397,8 @@
           "몸쓰기"
         ],
         "effect": "height"
-      }
+      },
+      "pages": 1
     },
     "bellringer": {
       "name": "종지기",
@@ -408,7 +433,8 @@
           "동료"
         ],
         "effect": "rope"
-      }
+      },
+      "pages": 2
     },
     "mirror": {
       "name": "거울상",
@@ -419,7 +445,8 @@
         "id": "mirror",
         "label": "따라 할 뿐이다 — 공격하지 않으면 공격하지 않는다",
         "effect": "mirror"
-      }
+      },
+      "pages": 1
     },
     "knight": {
       "name": "회색 기사",
@@ -444,7 +471,8 @@
           "label": "처형의 일격",
           "kill": true
         }
-      ]
+      ],
+      "pages": 0
     }
   },
   "companions": {
@@ -453,6 +481,7 @@
       "room": "1A",
       "dc": 7,
       "trust": 1,
+      "def": 11,
       "ability": "방패",
       "sheet": "npcs/garret",
       "desc": "적의 공격 하나를 완전히 막는다 (신뢰 3: 이번 턴 모든 공격)"
@@ -462,6 +491,7 @@
       "room": "2B",
       "dc": 8,
       "trust": 0,
+      "def": 9,
       "ability": "진단",
       "sheet": "npcs/lira",
       "desc": "적 하나의 약점을 알아낸다 (신뢰 3: 방 안의 모든 적 / 기사의 처형을 읽는다)"
@@ -471,6 +501,7 @@
       "room": "3B",
       "dc": 9,
       "trust": 0,
+      "def": 10,
       "ability": "샛길",
       "sheet": "npcs/pio",
       "desc": "이번 턴 적들을 따돌리고 다음 이동을 안전하게 한다 (신뢰 3: 적의 물건을 훔친다)"
@@ -608,6 +639,9 @@
     },
     "stay": {
       "name": "머묾"
+    },
+    "promise_together": {
+      "name": "약속 — 함께"
     }
   },
   "loud_threshold": 3,

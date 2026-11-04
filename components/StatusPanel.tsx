@@ -50,6 +50,7 @@ export default function StatusPanel({ game }: { game: Game }) {
           <div className={`h-full transition-all duration-500 ${r.hp <= 6 ? 'bg-red-500' : 'bg-cyan-500'}`} style={{ width: `${(Math.max(0, r.hp) / r.maxHp) * 100}%` }} />
         </div>
         <p className="mt-1 text-xs text-zinc-400">{Math.max(0, r.hp)} / {r.maxHp} · 회복 불가</p>
+        {r.prone && <p className="mt-1 text-[11px] font-bold text-orange-300">넘어짐 — 다음 판정 −{D.rules.prone_penalty}</p>}
       </Card>
 
       {r.floor > 0 && r.floor < 5 && (
@@ -61,7 +62,8 @@ export default function StatusPanel({ game }: { game: Game }) {
                   <div className="flex justify-between text-xs"><span className="text-zinc-200">{eng.displayName(e)}</span><span className="text-zinc-500">{e.hp}/{e.max}</span></div>
                   <div className="mt-1 h-1 overflow-hidden rounded bg-zinc-800"><div className="h-full bg-red-500/80" style={{ width: `${(e.hp / e.max) * 100}%` }} /></div>
                   {e.state !== 'engaged' ? <p className="mt-0.5 text-[11px] text-zinc-500">따돌림</p>
-                    : e.warn ? <p className="mt-0.5 text-[11px] font-bold text-orange-300">⚠ {e.warn}</p> : null}
+                    : e.warn ? <p className="mt-0.5 text-[11px] font-bold text-orange-300">⚠ {e.warn}</p>
+                      : r.foresight ? <p className="mt-0.5 text-[11px] text-sky-300">리라: 다음에 {eng.nextMoveKo(e)}</p> : null}
                 </li>
               ))}
             </ul>
@@ -84,21 +86,38 @@ export default function StatusPanel({ game }: { game: Game }) {
           <li><b className="text-zinc-200">{r.weapon.name}</b> <span className="text-zinc-500">{r.weapon.dice}</span></li>
           {r.relics.map(x => <li key={x} className="text-zinc-300">{x}</li>)}
           {Object.values(r.powers).map(p => <li key={p.name} className="text-cyan-300">{p.name} ×{p.uses}</li>)}
+          <li className="text-zinc-400">찢긴 책장 {r.pages}{r.pages >= D.rules.pages_per_extra_card ? ' · 보상 한 장 더 가능' : ''}</li>
         </ul>
       </Card>
 
-      <Card label="동료">
-        {r.party.length === 0 ? <p className="text-xs text-zinc-600">혼자다</p> : (
+      <Card label="동료" className={r.party.some(p => p.down) ? 'border-red-700' : ''}>
+        {r.party.length === 0 && !r.left.length && !r.abandoned.length ? <p className="text-xs text-zinc-600">혼자다</p> : (
           <ul className="space-y-1.5">
             {r.party.map(m => {
               const c = D.companions[m.id]
+              const st = m.down ? { t: '쓰러짐 — 일으켜야 한다', c: 'text-red-400 font-bold' }
+                : m.injured ? { t: '부상 — 이번 턴 쉰다', c: 'text-orange-300' }
+                  : r.floor === 5 && r.room === '5B' ? { t: '문턱에서 기다린다', c: 'text-zinc-500' }
+                    : { t: '함께', c: 'text-zinc-500' }
               return (
                 <li key={m.id}>
                   <div className="flex justify-between text-xs"><span className="text-zinc-200">{c.name}</span><span className="tracking-widest text-cyan-300">{'●'.repeat(m.trust)}{'○'.repeat(3 - m.trust)}</span></div>
-                  <p className="text-[11px] text-zinc-500">{c.ability}</p>
+                  <p className={`text-[11px] ${st.c}`}>{st.t} · {c.ability}</p>
                 </li>
               )
             })}
+            {r.left.map(x => (
+              <li key={x.id}>
+                <div className="flex justify-between text-xs"><span className="text-zinc-400">{D.companions[x.id].name}</span></div>
+                <p className="text-[11px] font-bold text-red-400">남겨짐 — {D.rooms[x.room].name} (계단 전에 구할 수 있음)</p>
+              </li>
+            ))}
+            {r.abandoned.map(id => (
+              <li key={id}>
+                <div className="flex justify-between text-xs"><span className="text-zinc-600 line-through">{D.companions[id].name}</span></div>
+                <p className="text-[11px] text-zinc-600">이번 다이브에서 잃었다</p>
+              </li>
+            ))}
           </ul>
         )}
       </Card>

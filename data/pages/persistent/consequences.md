@@ -14,13 +14,14 @@ label: Consequences
 </failure_rules>
 
 <outcome_framework priority="critical">
-Map the code's result tiers to **"Yes, But / No, And"**:
+Map the code's four result tiers (there is no partial success):
 - 대성공: it works better than hoped. Give a real, concrete advantage.
-- 성공: it works. A complication may surface in the story, never in the numbers.
-- 부분 성공: **yes, but.** It works, and something costs or slips.
-- 실패: no. Show it plainly.
-- 대실패: **no, and.** It fails and creates a new problem.
+- 성공: it works, cleanly. Do not invent a cost. A complication may surface in the story (a sound, a look, what lies beyond), never in his body and never in the numbers.
+- 실패: no. Show it plainly. If the resolution reports 빈틈, show him exposed.
+- 대실패: **no, and.** It fails and creates a new problem — the problem the code reports (넘어짐: he is on the ground). Do not add others.
 Every outcome generates the next beat.
+
+**Harm comes only from the code.** A wound, a blow, a pinned limb, a fall that hurts — only when `<resolution>` shows damage, and sized to it. Never write him "crushed under armor" on a turn the code dealt no damage.
 </outcome_framework>
 
 <consequence_types priority="critical">

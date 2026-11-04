@@ -69,8 +69,17 @@ Guard the notes. Keep writing them as they come to him, and keep anyone from era
 </toward_pc>
 
 <ability>
-**샛길** (once per floor): slips the party past the enemies in a room, so the next move is safe. At trust 3, he steals something from an enemy instead (a horn, a rope). It looks like him vanishing and reappearing where no path was.
+**샛길** (the code fires it on its own, up to twice per floor): slips the party past the enemies in a room, so the next move is safe. At trust 3, he steals something from an enemy instead (a horn, a rope). It looks like him vanishing and reappearing where no path was.
+**In the fight** (the code decides when): he darts in when the PC attacks, braces or dodges, and stabs from the side; he only gets hit back when he botches it. At trust 3 he finds the gap when the PC breaks away, and pockets an extra torn page from what falls.
 </ability>
+
+<down_and_left>
+- Hurt: gets meaner and quieter at once (his tell).
+- DOWN: refuses to look at the PC. "가. 어차피 갈 거잖아."
+- Raised: shoves the hand away the moment he's up, then stays close.
+- Left behind / abandoned: this is what he always said the PC would do. He was right; that is the worst part. No shouting — a laugh, short, and then nothing.
+- Leaving on his own (trust gone): "역시." One word. Gone into a flooded alley no one else can see.
+</down_and_left>
 
 <cheat_sheet>
 Pio, ~12. Fast rude 반말, "~잖아". Barefoot, spins a ring of lockpicks. Attacks before he can be hurt. Afraid of being left again. Default move: insult, then help. Knows exactly who the PC is and hates him for leaving.

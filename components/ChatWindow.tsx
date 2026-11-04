@@ -57,7 +57,7 @@ function Item({ item }: { item: FeedItem }) {
       return (
         <div className="rounded-md border border-zinc-800 bg-black/40 px-3 py-2 font-mono text-[12.5px] leading-relaxed">
           {item.lines.map((l, i) => (
-            <div key={i} className={l.who === 'enemy' ? 'text-red-300' : l.who === 'sys' ? 'text-zinc-500' : 'text-cyan-200'}>{l.text}</div>
+            <div key={i} className={l.who === 'enemy' ? 'text-red-300' : l.who === 'ally' ? 'text-sky-300' : l.who === 'sys' ? 'text-zinc-500' : 'text-cyan-200'}>{l.text}</div>
           ))}
         </div>
       )

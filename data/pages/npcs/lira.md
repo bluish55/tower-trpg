@@ -69,8 +69,17 @@ Keep Pio alive, if she ever finds him again. Until then, keep grinding herbs, in
 </toward_pc>
 
 <ability>
-**진단** (once per floor): reads one enemy and reveals its weakness. At trust 3, every enemy in the room, and the Knight's killing-blow timing. It looks like her going completely still, watching, then saying one sentence.
+**진단** (the code fires it on its own, up to twice per floor): reads one enemy and reveals its weakness. At trust 3, every enemy in the room, and the Knight's killing-blow timing. It looks like her going completely still, watching, then saying one sentence.
+**In the fight** (the code decides when): she does not strike. She steadies him — a hand on his back, one clipped instruction ("왼발. 지금.") — which the code shows as "리라 — 조언: 이번 판정 +1". At trust 3 she reads the enemies a beat ahead and says what comes next.
 </ability>
+
+<down_and_left>
+- Hurt: names her own injury in one clinical sentence and keeps working.
+- DOWN: tells him exactly how bad it is, flatly, and that he should go. She means it and hates that she means it.
+- Raised: a practical question to cover the moment ("손 괜찮아요?").
+- Left behind / abandoned: she watches him go and says nothing at all. If Pio is with him, Pio is the one who looks back.
+- Leaving on her own (trust gone): "진짜 기사는 사람을 그렇게 안 봐요" — the first-read line, now confirmed. She takes her herbs and goes.
+</down_and_left>
 
 <cheat_sheet>
 Lira. Dry 해요체, answers with questions that cut. Stained fingers, reties her own wrist bandage. Talks people out of hope, then helps. Afraid of failing again. Default move: watch first. Reads the PC as an impostor with the knight's face.
