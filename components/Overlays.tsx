@@ -191,26 +191,8 @@ export function ArchiveOverlay({ archive, onClose, onWipe }: { archive: Archive;
   )
 }
 
-/* ---------------- 게임 규칙 (수치는 game-data.json에서 읽는다. 약점·기사·결말 등 스포일러는 넣지 않는다) ---------------- */
+/* ---------------- 게임 규칙 (처음 할 때 헷갈리지 않을 정도만. 세부 수치와 스포일러는 넣지 않는다) ---------------- */
 export function HelpOverlay({ onClose }: { onClose: () => void }) {
-  const { rules: R, pc, dc } = D
-  const tieOk = R.tie_success
-  const tiers: [string, string, string][] = [
-    ['대성공', '합계가 목표 +5 이상, 또는 6·6', '기대 이상으로 풀린다. 공격이면 피해 +4'],
-    ['성공', tieOk ? '합계가 목표 이상' : '합계가 목표보다 큼', '해낸다'],
-    ['실패', '목표보다 조금 모자람', `못 해낸다. 공격·살핌이면 빈틈: 이번 턴 적 명중 +${R.opening_bonus}`],
-    ['대실패', '목표보다 4 이상 모자람, 또는 1·1', `넘어짐: 이번 턴 적 명중 +${R.opening_bonus}, 다음 판정 −${R.prone_penalty}`],
-  ]
-  const actions: [string, string][] = [
-    ['공격', `적을 친다. 목표는 적의 방어값. [공격: 동료 이름]이면 협공으로 판정 +${R.joint_bonus}`],
-    ['회피 · 방어', `이번 턴의 공격을 피하거나 막는다. 목표 ${dc['회피']}`],
-    ['살핌', `적, 벽, 장치를 살핀다. 약점이나 쪽지를 찾을 수 있다. 목표 ${dc['살핌']}`],
-    ['숨기', `숨어서 적을 따돌린다. 목표 ${dc['숨기']}`],
-    ['몸쓰기', `오르기, 뛰어넘기, 힘쓰기. 목표 ${dc['몸쓰기']}`],
-    ['말', `설득, 도발, 협상. 목표 ${dc['말']}, 상대에 따라 다름`],
-    ['이동', '다른 방으로 간다. 교전 중이면 이탈 판정'],
-    ['선택', '위험 없는 행동. 판정이 없다'],
-  ]
   return (
     <Overlay onBackdrop={onClose}>
       <Eyebrow>도움말</Eyebrow>
@@ -218,55 +200,24 @@ export function HelpOverlay({ onClose }: { onClose: () => void }) {
 
       <H4>진행</H4>
       <ul className="list-disc space-y-1 pl-4 text-sm leading-relaxed text-zinc-300">
-        <li>선택지를 누르거나(숫자 키 1~9) 하고 싶은 행동을 직접 적으세요.</li>
-        <li>주사위와 피해는 코드가 정하고, AI는 그 결과를 서술합니다. &quot;무조건 성공&quot;이라고 적어도 결과는 바뀌지 않아요.</li>
-        <li>쓰러지면 탑 밖으로 튕겨 나와 처음부터 다시 오릅니다. 진우는 잊지만, 플레이어는 기억해요.</li>
-        <li>찾아낸 약점과 쪽지는 탐사 기록에 남습니다.</li>
+        <li>선택지를 누르거나, 하고 싶은 행동을 직접 적는다.</li>
+        <li>쓰러지면 처음부터 다시 오른다. 진우는 잊지만, 당신은 기억한다.</li>
+        <li>찾아낸 약점과 쪽지는 탐사 기록에 남는다.</li>
       </ul>
 
-      <H4>판정: 2d6 + 보정 vs 목표</H4>
-      <p className="mb-2 text-sm text-zinc-300">주사위 2개를 더하고 보정을 붙여 목표와 비교합니다.</p>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-        {tiers.map(([name, when, effect]) => (
-          <Fragment key={name}>
-            <dt className="font-medium text-zinc-100">{name}</dt>
-            <dd className="text-zinc-400">{when}<br /><span className="text-zinc-300">{effect}</span></dd>
-          </Fragment>
-        ))}
-      </dl>
-      <p className="mt-2 text-xs text-zinc-500">적의 공격은 2d6 + 적의 보정이 진우의 방어 {pc.defense} 이상이면 맞습니다. 6·6은 항상 명중, 1·1은 항상 빗나가요.</p>
+      <H4>주사위</H4>
+      <p className="text-sm leading-relaxed text-zinc-300">
+        주사위 2개(2d6)에 보정을 더해 목표와 비교한다. 결과는 대성공, 성공, 실패, 대실패 중 하나다.
+        결과는 코드가 정하고, AI는 서술만 한다.
+      </p>
 
-      <H4>행동</H4>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
-        {actions.map(([name, desc]) => (
-          <Fragment key={name}>
-            <dt className="whitespace-nowrap font-medium text-zinc-100">{name}</dt>
-            <dd className="text-zinc-400">{desc}</dd>
-          </Fragment>
-        ))}
-      </dl>
-
-      <H4>이동과 이탈</H4>
+      <H4>알아두면 좋은 것</H4>
       <ul className="list-disc space-y-1 pl-4 text-sm leading-relaxed text-zinc-300">
-        <li>교전 중에 나가려면 이탈 판정(회피)을 합니다. 목표는 {R.disengage_dc}이고, 막는 적이 한 명 늘 때마다 +1. 실패하면 그 방에 남아요.</li>
-        <li>동료를 미끼로 두고 가면 +{R.bait_bonus}. 그 동료는 이번 다이브에서 돌아오지 않아요.</li>
-        <li>쓰러진 동료를 두고 가면 +{R.down_left_bonus}, 데리고 가면 −{R.carry_penalty}. 두고 간 동료는 계단을 오르기 전까지만 구할 수 있어요.</li>
-      </ul>
-
-      <H4>탑의 규칙</H4>
-      <ul className="list-disc space-y-1 pl-4 text-sm leading-relaxed text-zinc-300">
-        <li>HP는 {pc.hp}에서 시작하고 회복되지 않습니다. 다이브가 새로 시작될 때만 돌아와요.</li>
-        <li>층마다 시험과 제한 턴이 있습니다. 시간을 넘기면 좋지 않은 일이 벌어져요.</li>
-        <li>소리를 내면 기척이 쌓이고, {D.loud_threshold}칸이 차면 적이 더 몰려옵니다.</li>
-        <li>시험을 통과하면 보상 카드 한 장을 고릅니다. 적이 떨어뜨린 찢긴 책장 {R.pages_per_extra_card}장이면 한 장 더 고를 수 있어요.</li>
-        <li>적의 큰 공격에는 예고 동작이 있습니다. 경고가 보이면 대비하세요.</li>
-      </ul>
-
-      <H4>동료</H4>
-      <ul className="list-disc space-y-1 pl-4 text-sm leading-relaxed text-zinc-300">
-        <li>동료는 스스로 움직입니다. 능력은 층당 {R.companion_skill_uses}번까지, 신뢰가 높을수록 자주 도와줘요.</li>
-        <li>맞아서 부상을 입으면 한 턴 쉬고, 부상 중에 또 맞으면 쓰러집니다. 쓰러지면 [동료: 이름]으로 일으키세요.</li>
-        <li>동료를 어떻게 대하는지에 따라 신뢰가 달라지고, 버린 선택은 이야기에 남습니다.</li>
+        <li>HP는 회복되지 않는다.</li>
+        <li>층마다 제한 턴이 있다. 넘기면 좋지 않은 일이 벌어진다.</li>
+        <li>적의 큰 공격에는 예고 동작이 있다.</li>
+        <li>싸우는 중에 도망치려면 판정이 필요하다.</li>
+        <li>동료는 스스로 움직인다. 어떻게 대하는지가 이야기에 남는다.</li>
       </ul>
 
       <div className="mt-6 flex justify-end"><Primary onClick={onClose}>닫기</Primary></div>

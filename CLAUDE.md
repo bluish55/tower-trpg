@@ -94,7 +94,7 @@ AI는 코드가 피해를 준 턴에만 몸이 다치는 서술을 쓴다 (`game
 | `components/ChatWindow.tsx` | 피드 (서술, 판정 결과, 시스템 알림) |
 | `components/InputBox.tsx` | 선택지 버튼 + 자유 입력 |
 | `components/StatusPanel.tsx` | 시험·HP·적·기척·장비·동료·쪽지 |
-| `components/Overlays.tsx` | 보상, 추방, 결말, 탐사 기록, 설정, 게임 규칙(물음표 아이콘. 수치는 `game-data.json`에서 읽고 스포일러는 넣지 않는다) |
+| `components/Overlays.tsx` | 보상, 추방, 결말, 탐사 기록, 설정, 게임 규칙(물음표 아이콘. 처음 할 때 필요한 만큼만 짧게 적고, 세부 수치와 스포일러는 넣지 않는다) |
 | `components/DebugPanel.tsx` | 설정에서 켜면: 상태 JSON, 보낸 메시지, AI 원문, 토큰·캐시 |
 
 ## GM 출력 포맷
