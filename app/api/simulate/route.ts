@@ -388,6 +388,8 @@ function summarize(results: RunResult[]) {
    API 핸들러
    ============================================================ */
 export async function GET(req: NextRequest) {
+  // 개발용. 배포본에서는 누구나 서버 자원을 쓰게 되므로 닫아 둔다
+  if (process.env.NODE_ENV === 'production') return NextResponse.json({ error: 'not found' }, { status: 404 })
   const url = new URL(req.url)
   const runs = Math.min(Math.max(Number(url.searchParams.get('runs') ?? '1'), 1), 2000)
   const verbose = url.searchParams.get('verbose') === '1'

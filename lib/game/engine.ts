@@ -20,6 +20,19 @@ export const D = gameData as unknown as GameData
 
 const COMP_ID: Record<string, CompanionId> = { '가렛': 'garret', '리라': 'lira', '피오': 'pio' }
 
+/** 태그 인자의 동료 이름이 우선. 문장에서는 단어 첫머리만 찾는다 ("자리라도"의 "리라"는 이름이 아니다) */
+function namedCompanion(arg: string | null | undefined, text: string): CompanionId | null {
+  const name = Object.keys(COMP_ID).find(k => (arg ?? '').includes(k))
+    ?? Object.keys(COMP_ID).find(k => new RegExp(`(^|[^가-힣])${k}`).test(text))
+  return name ? COMP_ID[name] : null
+}
+
+/** [이동: 2B, 버림: 가렛, 데리고: 리라] 에서 "버림" 또는 "데리고" 뒤의 동료 */
+function companionAfter(arg: string, word: '버림' | '데리고'): CompanionId | null {
+  const m = arg.match(new RegExp(`${word}\\s*[:：]\\s*(${Object.keys(COMP_ID).join('|')})`))
+  return m ? COMP_ID[m[1]] : null
+}
+
 /* ---------------- dice (2d6) ---------------- */
 function rnd(n: number): number {
   const a = new Uint32Array(1)
@@ -98,7 +111,8 @@ interface Ctx {
   tag: ActionTag
   dodge: number; dodgeAll: boolean
   defend: number; defendAll: boolean
-  blockOne: boolean; blockAll: boolean; blockUsed: boolean
+  blockAll: boolean              // 신뢰 3의 방패: 이번 턴 남은 공격을 모두 막는다
+  garretCooldown: boolean        // 가렛이 직전 턴에 방패를 썼는지
   blind: boolean; hitBonus: number
   quiet: boolean; silent: boolean; hideSkip: boolean
   moved: boolean; struggled: boolean
@@ -111,7 +125,7 @@ interface Ctx {
 }
 const newCtx = (tag: ActionTag): Ctx => ({
   tag, dodge: 0, dodgeAll: false, defend: 0, defendAll: false,
-  blockOne: false, blockAll: false, blockUsed: false, blind: false, hitBonus: 0,
+  blockAll: false, garretCooldown: false, blind: false, hitBonus: 0,
   quiet: false, silent: false, hideSkip: false, moved: false, struggled: false,
   joint: null, jointTarget: null, rolled: null, resting: [], jointHit: false, noCounterUid: null,
 })
@@ -126,6 +140,8 @@ export class Engine {
   room(): RoomDef { if (!this.r.room) throw new Error('room() called with null room'); return D.rooms[this.r.room] }
   inParty(id: CompanionId) { return this.r.party.some(p => p.id === id) }
   member(id: CompanionId) { return this.r.party.find(p => p.id === id) }
+  /** 아직 만나지 않았거나 설득에 실패한 동료만 영입할 수 있다. 남겨진 동료는 그 방에 돌아가 일으켜야 한다 */
+  canRecruit(id: CompanionId) { return !this.inParty(id) && !this.r.abandoned.includes(id) && !this.r.left.some(x => x.id === id) }
   here(): EnemyInst[] { return (this.r.enemies[this.r.room ?? ''] ?? []).filter(e => e.hp > 0) }
   engaged(): EnemyInst[] { return this.here().filter(e => e.state === 'engaged') }
   def(e: EnemyInst): EnemyDef { return D.enemies[e.type] }
@@ -311,10 +327,15 @@ export class Engine {
     this.log('join', id)
   }
 
-  changeTrust(id: CompanionId, delta: number, reason: string, out: SysNotice[], t?: Turn) {
+  /** canLeave: 코드가 낸 하락에만 켠다. 신뢰 0에서 더 떨어지면 떠난다. AI 태그는 0 아래로 내리지 못한다 */
+  changeTrust(id: CompanionId, delta: number, reason: string, out: SysNotice[], t?: Turn, canLeave = false) {
     const m = this.member(id)
     if (!m) return
     const before = m.trust
+    if (canLeave && before === 0 && delta < 0) {
+      this.abandon(id, 'trust', out, t)
+      return
+    }
     m.trust = clamp(m.trust + Math.sign(delta), 0, 3)
     if (m.trust === before) return
     out.push({ kind: 'trust', title: m.trust > before ? '신뢰 상승' : '신뢰 하락', text: `${D.companions[id].name} ${m.trust}/3${reason ? ' — ' + reason : ''}` })
@@ -324,7 +345,7 @@ export class Engine {
 
   /** 동료를 잃는다: 직접 버림 / 쓰러진 채 남겨두고 계단을 오름 / 신뢰가 바닥나 떠남.
    *  셋 다 똑같이 "버림"이고, 이번 다이브의 약속 결말이 잠긴다. */
-  private abandon(id: CompanionId, how: 'chosen' | 'left' | 'trust', out: SysNotice[], t?: Turn) {
+  private abandon(id: CompanionId, how: 'chosen' | 'bait' | 'left' | 'trust', out: SysNotice[], t?: Turn) {
     const r = this.r
     if (r.abandoned.includes(id)) return
     r.party = r.party.filter(p => p.id !== id)
@@ -332,6 +353,7 @@ export class Engine {
     r.abandoned.push(id)
     const name = D.companions[id].name
     const text = how === 'chosen' ? `${josa(name, '을', '를')} 두고 떠났다.`
+      : how === 'bait' ? `${josa(name, '을', '를')} 미끼로 두고 빠져나왔다.`
       : how === 'left' ? `쓰러진 ${josa(name, '을', '를')} 두고 계단을 올랐다.`
         : `${josa(name, '이', '가')} 진우를 떠났다.`
     out.push({ kind: 'fail', title: '동료를 잃었다', text })
@@ -339,7 +361,7 @@ export class Engine {
     this.log('abandon', `${id} ${how}`)
     // 그 장면을 본 동료들의 신뢰 −1 (스스로 떠난 경우는 제외 — 연쇄로 번지지 않게)
     if (how !== 'trust') {
-      for (const m of [...r.party]) this.changeTrust(m.id, -1, `${josa(name, '을', '를')} 버리는 걸 봤다`, out, t)
+      for (const m of [...r.party]) this.changeTrust(m.id, -1, `${josa(name, '을', '를')} 버리는 걸 봤다`, out, t, true)
     }
   }
 
@@ -355,9 +377,9 @@ export class Engine {
   }
 
   /** 계단을 오를 때: 곁에 없는 동료는 버림으로 확정 */
-  private confirmAtStairs(t: Turn) {
+  private confirmAtStairs(t: Turn, carried?: PartyMember) {
     const r = this.r
-    for (const m of r.party.filter(p => p.down)) this.leaveBehind(m, t)
+    for (const m of r.party.filter(p => p.down && p !== carried)) this.leaveBehind(m, t)
     for (const x of r.left.filter(l => l.floor === r.floor)) this.abandon(x.id, 'left', t.sys, t)
   }
 
@@ -455,7 +477,7 @@ export class Engine {
     }
     if (id === '5A' && r.party.length) t.events.push({ type: 'threshold' })
     r.visited[id] = true
-    if (rm.npc && !this.inParty(rm.npc) && !r.abandoned.includes(rm.npc)) t.events.push({ type: 'npc_present', id: rm.npc })
+    if (rm.npc && this.canRecruit(rm.npc)) t.events.push({ type: 'npc_present', id: rm.npc })
     else if (rm.npc && r.abandoned.includes(rm.npc)) t.codeNotes.push(`${D.companions[rm.npc].name} is not here anymore, or will not look at him. He left them behind this dive.`)
     if (id === '5B') t.events.push({ type: 'witch' })
   }
@@ -469,13 +491,7 @@ export class Engine {
   }
 
   /* ---------------- companion auto-actions ---------------- */
-  private specMax(spec: string): number {
-    const m = spec.replace(/\s/g, '').match(/(\d+)d(\d+)([+-]\d+)?/)
-    if (!m) return 0
-    return Number(m[1]) * Number(m[2]) + (m[3] ? Number(m[3]) : 0)
-  }
-
-  private companionAttack(m: PartyMember, t: Turn, forced?: EnemyInst) {
+  private companionAttack(m: PartyMember, t: Turn, ctx: Ctx, forced?: EnemyInst) {
     const target = forced && forced.hp > 0 && forced.type !== 'knight' && !this.def(forced).mirror
       ? forced
       : this.engaged().find(e => e.type !== 'knight' && !this.def(e).mirror)
@@ -490,14 +506,15 @@ export class Engine {
     const hit = tier !== 'fail' && tier !== 'critfail'
     t.lines.push({ who: 'ally', text: `${label} — 공격: 2d6(${a},${b})${sign(hitMod)}=${total} / 방어 ${this.def(target).def} — ${hit ? '적중' : '빗나감'}` })
     if (hit) this.damageEnemy(target, rollSpec(dmgSpec), t)
-    // 반격: 가렛은 항상, 피오는 대실패시만. 이번 공격으로 쓰러진 적은 반격하지 않는다
-    const counterExposed = target.hp > 0 && (isGarret || tier === 'critfail')
+    // 반격: 가렛은 확률로, 피오는 대실패시만. 이번 공격으로 쓰러진 적은 반격하지 않는다
+    const counterExposed = target.hp > 0 && (isGarret ? Math.random() < D.rules.garret_counter_chance : tier === 'critfail')
     if (counterExposed) {
+      if (ctx.joint === m.id) ctx.jointHit = true // 협공 상대가 받는 반격은 하나뿐이다
       const mv = this.basicMove(target)
       const counterMod = !isGarret ? 3 : 0 // 피오 대실패: 역보정 +3
       const ca = d6(), cb = d6()
       const ctotal = ca + cb + (mv.a ?? 0) + counterMod
-      const chit = ca + cb !== 2 && (ca + cb === 12 || ctotal >= D.pc.defense)
+      const chit = ca + cb !== 2 && (ca + cb === 12 || ctotal >= D.companions[m.id].def)
       t.lines.push({ who: 'ally', text: `${this.displayName(target)} 반격 → ${label}: ${chit ? '적중' : '빗나감'}` })
       if (chit) this.hurtAlly(m, t)
     }
@@ -552,6 +569,7 @@ export class Engine {
       const wasOnCooldown = m.onCooldown
       const wasInjured = m.injured
       m.onCooldown = false
+      if (m.id === 'garret') ctx.garretCooldown = wasOnCooldown
       if (wasInjured) ctx.resting.push(m.id) // 이번 턴은 쉰다 (턴 끝에 부상이 풀린다)
       const isJoint = ctx.joint === m.id
       if (m.id === 'lira' && m.trust >= 3) r.foresight = true
@@ -559,25 +577,18 @@ export class Engine {
       // 발동 조건과 확률 결정
       const engaged = this.engaged()
       let condition = false
-      let prob = [0.10, 0.30, 0.60, 0.90][m.trust]
-      const deathRisk = engaged.some(e =>
-        e.type !== 'knight' && r.hp <= this.specMax(this.basicMove(e).dmg ?? '1d6')
-      )
+      const prob = [0.10, 0.30, 0.60, 0.90][m.trust]
 
-      if (m.id === 'garret') {
-        condition = engaged.length > 0
-        if (condition && deathRisk) prob = [0.10, 0.30, 0.60, 0.80][m.trust]
-      } else if (m.id === 'lira') {
+      if (m.id === 'lira') {
         condition = this.here().some(e => this.def(e).weak && !r.known[this.def(e).weak!.id])
       } else if (m.id === 'pio') {
         condition = engaged.length > 0
       }
 
-      // 능력 자동 발동 (선배): 층당 2회, 연속 불가(5% 행운 돌파), 부상 중엔 가렛만 위급 시 20% 돌파.
-      // 협공 중인 동료는 능력 대신 진우와 같이 친다.
-      let canSkill = m.uses < 2 && condition && !isJoint
+      // 능력 자동 발동 (선배): 층당 2회, 연속 불가(5% 행운 돌파), 부상 중엔 쓰지 못한다.
+      // 협공 중인 동료는 능력 대신 진우와 같이 친다. 가렛의 방패는 여기서 나가지 않는다 (tryShield).
+      let canSkill = m.uses < 2 && condition && !isJoint && !wasInjured
       if (canSkill && wasOnCooldown && Math.random() >= 0.05) canSkill = false
-      if (canSkill && wasInjured && !(m.id === 'garret' && deathRisk && Math.random() < 0.20)) canSkill = false
 
       let skillFired = false
       if (canSkill && Math.random() < prob) {
@@ -585,12 +596,7 @@ export class Engine {
         m.onCooldown = true
         skillFired = true
 
-        if (m.id === 'garret') {
-          if (m.trust >= 3) ctx.blockAll = true
-          else ctx.blockOne = true
-          t.lines.push({ who: 'ally', text: `가렛 — 방패${m.trust >= 3 ? ' (이번 턴 모든 공격)' : ''}` })
-          if (kn) r.f4used.garret = true
-        } else if (m.id === 'lira') {
+        if (m.id === 'lira') {
           const targets = this.here().filter(e => this.def(e).weak && !r.known[this.def(e).weak!.id])
           const list = m.trust >= 3 ? targets : targets.slice(0, 1)
           list.forEach(e => this.knowWeak(this.def(e).weak!.id, t))
@@ -631,7 +637,7 @@ export class Engine {
         else if (ctx.tag === '방어') attackProb = [0.40, 0.55, 0.70, 0.85][m.trust]
         else if (ctx.tag === '회피') attackProb = [0.25, 0.33, 0.40, 0.50][m.trust]
       }
-      if (attackProb >= 0 && Math.random() < attackProb) this.companionAttack(m, t, isJoint ? ctx.jointTarget ?? undefined : undefined)
+      if (attackProb >= 0 && Math.random() < attackProb) this.companionAttack(m, t, ctx, isJoint ? ctx.jointTarget ?? undefined : undefined)
     }
 
     // 기사 우회 체크
@@ -663,20 +669,39 @@ export class Engine {
     t.lines.push({ who: 'enemy', text: `[${this.displayName(e)} ${label}: 2d6(${a},${b}) ${sign(hitMod)} = ${total} / 방어 ${D.pc.defense} — ${hit ? '적중' : '빗나감'}]` })
     if (!hit) return
     let dmg = rollSpec(mv.dmg ?? '1d6')
-    if (ctx.blockAll || (ctx.blockOne && !ctx.blockUsed)) {
-      ctx.blockUsed = true
+    if (ctx.defendAll) dmg = 0
+    dmg -= ctx.defend
+    const shardReady = r.flags.shard && !r.flags.shardHit[r.floor] && dmg > 0
+    if (shardReady) dmg -= 2
+    dmg = Math.max(0, dmg)
+    if (dmg > 0 && this.tryShield(e, mv, dmg, ctx, t)) {
       t.lines.push({ who: 'sys', text: '가렛의 방패가 막았다 — 피해 없음.' })
       return
     }
-    if (ctx.defendAll) dmg = 0
-    dmg -= ctx.defend
-    if (r.flags.shard && !r.flags.shardHit[r.floor] && dmg > 0) {
-      r.flags.shardHit[r.floor] = true
-      dmg -= 2
-    }
-    dmg = Math.max(0, dmg)
+    if (shardReady) r.flags.shardHit[r.floor] = true // 방패가 막았으면 방패 조각은 아껴진다
     this.damagePC(dmg, t)
     t.lines.push({ who: 'sys', text: `피해 ${dmg} → HP ${Math.max(0, r.hp)}/${r.maxHp}` })
+  }
+
+  /** 가렛의 방패: 평소에는 공격만 하다가, 진우가 위기에 맞는 순간에 뛰어든다.
+   *  위기 = 예고된 큰 공격, 또는 이번 피해로 HP가 rules.garret_shield_hp 이하가 될 때. 층당 2회, 연속 불가(5% 돌파). */
+  private tryShield(e: EnemyInst, mv: EnemyMove, dmg: number, ctx: Ctx, t: Turn): boolean {
+    if (ctx.blockAll) return true
+    const r = this.r, m = this.member('garret')
+    if (!m || m.down || m.uses >= 2 || ctx.joint === 'garret') return false
+    const bigHit = !!mv.label && !this.def(e).mirror
+    if (!bigHit && r.hp - dmg > D.rules.garret_shield_hp) return false
+    if (ctx.garretCooldown && Math.random() >= 0.05) return false
+    const chance = m.injured ? D.rules.garret_shield_injured_chance : D.rules.garret_shield_chance[m.trust]
+    if (Math.random() >= chance) return false
+    m.uses++
+    m.onCooldown = true
+    ctx.garretCooldown = true
+    if (m.trust >= 3) ctx.blockAll = true
+    if (e.type === 'knight') r.f4used.garret = true
+    t.lines.push({ who: 'ally', text: `가렛 — 방패${m.trust >= 3 ? ' (이번 턴 모든 공격)' : ''}` })
+    this.log('shield', e.type)
+    return true
   }
 
   private basicMove(e: EnemyInst): EnemyMove {
@@ -778,14 +803,18 @@ export class Engine {
     const hadEngaged = this.engaged().length > 0
     const killsBefore = r.kills
 
-    // 협공: [공격: 가렛] 또는 문장에 동료 이름 — 그 동료가 반드시 같이 치고, 판정 +2, 반격은 그 동료에게
-    if (tag === '공격') {
-      const named = Object.keys(COMP_ID).find(k => (action.arg ?? '').includes(k)) ?? Object.keys(COMP_ID).find(k => text.includes(k))
-      const jm = named ? this.member(COMP_ID[named]) : undefined
-      if (jm && !jm.down && !jm.injured) {
+    // 협공: [공격: 가렛] — 그 동료가 반드시 같이 치고, 판정 +2, 반격은 그 동료에게. 태그 인자로만 정한다
+    if (tag === '공격' && !action.improvised) {
+      const id = namedCompanion(action.arg, '')
+      const jm = id ? this.member(id) : undefined
+      const target = jm ? this.findTarget(text) : undefined
+      if (jm && (jm.down || jm.injured)) t.codeNotes.push(`${D.companions[jm.id].name} cannot join the attack right now (hurt or down). The PC strikes alone.`)
+      // 기사와 거울상은 동료가 치지 못하고 동료를 노리지도 않아서 협공이 성립하지 않는다
+      else if (jm && target && (target.type === 'knight' || this.def(target).mirror)) t.codeNotes.push(`${D.companions[jm.id].name} cannot join an attack on ${target.name}. The PC strikes alone.`)
+      else if (jm && target) {
         ctx.joint = jm.id
-        ctx.jointTarget = this.findTarget(text) ?? null
-      } else if (jm) t.codeNotes.push(`${D.companions[jm.id].name} cannot join the attack right now (hurt or down). The PC strikes alone.`)
+        ctx.jointTarget = target
+      }
     }
     this.companionsAct(ctx, t)
     const silenceKeys = D.enemies.hound.weak?.keys ?? []
@@ -815,7 +844,10 @@ export class Engine {
     if (missing) t.codeNotes.push(missingNote)
     else switch (tag) {
       case '공격': {
-        const e = ctx.jointTarget ?? this.findTarget(text)
+        // 협공 대상을 동료가 먼저 쓰러뜨렸으면 남은 적을 친다. 남은 적이 없으면 휘두를 일도 없다
+        const jointDown = !!ctx.jointTarget && ctx.jointTarget.hp <= 0
+        const e = (jointDown ? undefined : ctx.jointTarget) ?? this.findTarget(text)
+        if (!e && jointDown) { t.codeNotes.push('The target was already brought down by a companion this turn.'); break }
         if (!e) { this.check('공격', 8, 0, t, undefined, ctx); t.codeNotes.push('There is nothing here to strike.'); break }
         const improvised = action.improvised ?? null
         const ranged = improvised === 'ranged'
@@ -829,7 +861,6 @@ export class Engine {
         const res = this.check('공격', this.def(e).def, bonus, t, label, ctx)
         this.exposure(res.tier, true, ctx, t)
         if (!res.ok) break
-        if (e.hp <= 0) { t.codeNotes.push('The target was already brought down by a companion this turn.'); break }
         if (this.weakMatch(e, '공격', text)) { this.applyWeak(e, t); break }
         let dmg = rollSpec(r.weapon.dice)
         if (r.flags.fang && e.hp < e.max) dmg += 2
@@ -902,14 +933,16 @@ export class Engine {
         const kn = this.here().find(e => e.type === 'knight' && e.state === 'engaged')
         if (rm.npc && !this.inParty(rm.npc) && r.abandoned.includes(rm.npc)) {
           t.codeNotes.push(`${D.companions[rm.npc].name} will not come with him again this dive — he left them behind. They do not join, whatever he says.`)
-        } else if (rm.npc && !this.inParty(rm.npc)) {
+        } else if (rm.npc && this.canRecruit(rm.npc)) {
           const c = D.companions[rm.npc]
           const res = this.check('말', c.dc, 0, t, `${c.name} 설득`, ctx)
+          this.exposure(res.tier, false, ctx, t)
           if (res.ok) this.join(rm.npc, t)
           else t.codeNotes.push(`${c.name} is not persuaded (yet). They can be asked again.`)
         } else if (kn && r.floor === 4) {
           const canReach = r.knight.helm >= 1 && this.hasFloorNote(4)
           const res = this.check('말', canReach ? 10 : 15, 0, t, '기사에게 말하기', ctx)
+          this.exposure(res.tier, false, ctx, t)
           if (res.ok && canReach) {
             r.knight.state = 'yielded'
             kn.state = 'yielded'
@@ -932,8 +965,8 @@ export class Engine {
       }
       case '동료': {
         // 동료는 알아서 움직인다(선배). [동료: 이름]은 쓰러진 동료를 일으켜 세울 때만 쓴다.
-        const nm = Object.keys(COMP_ID).find(k => (action.arg ?? '').includes(k)) ?? Object.keys(COMP_ID).find(k => text.includes(k))
-        const m = nm ? this.member(COMP_ID[nm]) : r.party.find(p => p.down)
+        const nm = namedCompanion(action.arg, text)
+        const m = nm ? this.member(nm) : r.party.find(p => p.down)
         if (m && m.down) {
           m.down = false
           m.injured = true // 일어섰지만 다음 턴은 쉰다
@@ -947,8 +980,7 @@ export class Engine {
       }
       case '떠남': {
         // 동료를 직접 버린다. AI가 서술로 내보낼 수는 없고, 플레이어가 고른 이 태그로만 일어난다.
-        const nm = Object.keys(COMP_ID).find(k => (action.arg ?? '').includes(k)) ?? Object.keys(COMP_ID).find(k => text.includes(k))
-        const id = nm ? COMP_ID[nm] : null
+        const id = namedCompanion(action.arg, text)
         if (id && (this.inParty(id) || r.left.some(x => x.id === id))) this.abandon(id, 'chosen', t.sys, t)
         else t.codeNotes.push('There is no such companion with him. Treat this as a [선택] moment.')
         ctx.quiet = true
@@ -961,7 +993,7 @@ export class Engine {
         ctx.quiet = true // 선택
     }
 
-    if (r.offer) return t // 보상 선택 대기: 이 턴은 여기서 멈춤
+    if (r.offer) { r.aid = 0; return t } // 보상 선택 대기: 이 턴은 여기서 멈춤. 리라의 조언은 다음 층으로 넘어가지 않는다
     if (!ctx.moved && r.hp > 0) this.enemiesAct(ctx, t)
     if (ctx.silent && !this.engaged().length) r.hidden = true
 
@@ -1021,10 +1053,22 @@ export class Engine {
     // 시험 실패로 내려온 기사(hunting)는 느리게 뒤따라올 뿐 길을 막지 않는다 — 도망쳐서 계단을 오르는 게 살 길
     const blockers = this.engaged().filter(e =>
       !this.def(e).mirror && e.stunned <= 0 && !(e.type === 'knight' && (SAFE_KNIGHT.includes(r.knight.state) || r.knight.state === 'hunting')))
+    // [이동: 2B, 버림: 가렛]으로 고른 미끼, 또는 두고 가는 쓰러진 동료가 있으면 빠져나가기 쉽고,
+    // [이동: 2B, 데리고: 가렛]으로 쓰러진 동료를 데려가면 어렵다
+    const baitId = companionAfter(arg, '버림'), carryId = companionAfter(arg, '데리고')
+    const bait = baitId ? this.member(baitId) : undefined
+    const carried = carryId && carryId !== baitId ? r.party.find(p => p.id === carryId && p.down) : undefined
+    const leftDown = r.party.find(p => p.down && p !== bait && p !== carried)
     if (!r.hidden && blockers.length) {
       const pio = this.member('pio')
-      const extra = pio && !pio.down && pio.trust >= 3 ? 2 : 0
-      const res = this.check('회피', D.rules.disengage_dc + blockers.length - 1, extra, t, '이탈', ctx)
+      const pioHelp = pio && !pio.down && pio.trust >= 3 && pio !== bait ? 2 : 0
+      const decoyBonus = bait ? D.rules.bait_bonus : leftDown ? D.rules.down_left_bonus : 0
+      const notes = [
+        ...(bait ?? leftDown ? [`${josa(D.companions[(bait ?? leftDown)!.id].name, '을', '를')} 미끼로`] : []),
+        ...(carried ? [`${josa(D.companions[carried.id].name, '을', '를')} 데리고`] : []),
+      ]
+      const label = notes.length ? `이탈 (${notes.join(', ')})` : '이탈'
+      const res = this.check('회피', D.rules.disengage_dc + blockers.length - 1, pioHelp + decoyBonus - (carried ? D.rules.carry_penalty : 0), t, label, ctx)
       if (!res.ok) {
         // 못 빠져나갔다: 이 방에 그대로 있고, 적들이 이번 턴 정상적으로 움직인다
         this.exposure(res.tier, false, ctx, t)
@@ -1035,9 +1079,15 @@ export class Engine {
     r.hidden = false
     ctx.moved = true
     if (r.hp <= 0) return
+    if (bait) this.abandon(bait.id, 'bait', t.sys, t) // 스스로 고른 미끼: 이번 다이브에서 돌아오지 않는다
     // 쓰러진 동료는 따라오지 못한다
-    if (!up) for (const m of r.party.filter(p => p.down)) this.leaveBehind(m, t)
-    else this.confirmAtStairs(t) // 계단을 오르는 순간: 곁에 없는 동료는 버림으로 확정
+    if (!up) for (const m of r.party.filter(p => p.down && p !== carried)) this.leaveBehind(m, t)
+    else this.confirmAtStairs(t, carried) // 계단을 오르는 순간: 곁에 없는 동료는 버림으로 확정
+    if (carried) {
+      const name = D.companions[carried.id].name
+      t.lines.push({ who: 'ally', text: `${josa(name, '을', '를')} 들쳐 메고 함께 움직인다.` })
+      t.codeNotes.push(`He drags ${name} along with him. ${name} is still DOWN and cannot act until raised. Show the weight of it.`)
+    }
     t.lines.push({ who: 'sys', text: `이동 → ${D.rooms[target].name}` })
     const huntingKnight = this.here().find(e => e.type === 'knight' && r.knight.state === 'hunting')
     if (up) {

@@ -37,7 +37,7 @@ export function stateBlock(eng: Engine): string {
   const party = r.party.map(p => {
     const c = D.companions[p.id]
     const status = p.uses >= 2 ? 'floor limit reached' : p.onCooldown ? `${p.uses}/2 uses, cooldown` : `${p.uses}/2 uses`
-    const body = p.down ? 'DOWN — cannot act; offer [동료: ' + c.name + '] to raise them; leaving the room leaves them behind'
+    const body = p.down ? 'DOWN — cannot act; offer [동료: ' + c.name + '] to raise them; leaving the room leaves them behind unless he carries them with [이동: 방ID, 데리고: ' + c.name + ']'
       : p.injured ? 'hurt — resting this turn' : 'on their feet'
     return `${c.name} [${p.id}] (trust ${p.trust}/3, ${body}, ${c.ability} — ${status})`
   })
@@ -45,7 +45,7 @@ export function stateBlock(eng: Engine): string {
   if (r.floor === 5 && r.room === '5B' && r.party.length) L.push(`companions: waiting at the threshold of the blank page (5A). They are characters of written volumes and cannot step onto the unwritten page. They are not in this room.`)
   for (const x of r.left) L.push(`left behind, down: ${D.companions[x.id].name} in ${x.room} ${D.rooms[x.room].name}${x.room === r.room ? ' (HERE)' : ''} — can still be raised before he climbs the stairs`)
   if (r.abandoned.length) L.push(`abandoned this dive: ${r.abandoned.map(id => D.companions[id].name).join(', ')} — they are gone for this dive${r.floor === 5 ? '; the witch knows who he left behind' : ''}`)
-  if (rm.npc && !eng.inParty(rm.npc) && !r.abandoned.includes(rm.npc)) L.push(`here, not in party: ${D.companions[rm.npc].name} [${rm.npc}] — can be recruited with [말]`)
+  if (rm.npc && eng.canRecruit(rm.npc)) L.push(`here, not in party: ${D.companions[rm.npc].name} [${rm.npc}] — can be recruited with [말]`)
   const es = eng.here()
   if (es.length) {
     L.push('enemies here:')
@@ -95,10 +95,11 @@ function eventText(e: GameEvent, dive: number): string {
     case 'trial_unclear': return e.reason === 'clock' ? 'He climbs after failing the trial. No reward.'
       : e.reason === 'target' ? 'He climbs without bringing down the hunter. The trial is not cleared. No reward. Behind him, the horn sounds once more in the fog.'
         : 'He climbs without completing the trial (the boy is not with him). No reward. The tower does not acknowledge him.'
-    case 'companion_down': return `${D.companions[e.id].name} goes down — conscious but unable to stand or fight. Show it plainly. Offer [동료: ${D.companions[e.id].name}] among the choices. If the PC leaves this room, ${D.companions[e.id].name} stays here.`
+    case 'companion_down': return `${D.companions[e.id].name} goes down — conscious but unable to stand or fight. Show it plainly. Offer [동료: ${D.companions[e.id].name}] among the choices. If the PC leaves this room, ${D.companions[e.id].name} stays here unless he carries them.`
     case 'companion_raised': return `The PC spends this moment pulling ${D.companions[e.id].name} back to their feet. Show the weight of it, and what ${D.companions[e.id].name} says or doesn't say.`
     case 'companion_found': return `He finds ${D.companions[e.id].name} where he left them, still down. They are alive. How they look at him depends on their sheet. Offer [동료: ${D.companions[e.id].name}].`
     case 'companion_abandoned': return e.how === 'chosen' ? `He leaves ${D.companions[e.id].name} behind by his own choice. Show ${D.companions[e.id].name}'s face as he goes, and how the others react. ${D.companions[e.id].name} is gone for this dive.`
+      : e.how === 'bait' ? `He got away by leaving ${D.companions[e.id].name} as bait: the enemies turned on ${D.companions[e.id].name} while he ran. Show the moment ${D.companions[e.id].name} understands, and what he hears behind him. Do not narrate ${D.companions[e.id].name}'s death. ${D.companions[e.id].name} is gone for this dive.`
       : e.how === 'left' ? `He climbed the stairs while ${D.companions[e.id].name} was still lying below. There is no going back now. Let him know it, in the body, without a speech. ${D.companions[e.id].name} is gone for this dive.`
         : `${D.companions[e.id].name} has had enough of him and walks away. Play it as their sheet says they would leave. They are gone for this dive.`
     case 'disengage_fail': return 'He tried to break away and could not; the enemies close the gap and he is still in the fight, in the same room.'
@@ -154,6 +155,8 @@ export function dynamicPages(eng: Engine, t: Turn): string[] {
   if (!r.floor || ev.some(x => ['opening', 'enter_tower', 'dive_start', 'dive_outside', 'expelled'].includes(x))) pages.push('npcs/run-frame')
   if (r.floor) pages.push(`floors/floor-${r.floor}`)
   r.party.forEach(p => pages.push(D.companions[p.id].sheet))
+  // 이번 턴에 떠난 동료는 파티에 없지만, 이별 장면에 시트가 필요하다
+  t.events.forEach(e => { if (e.type === 'companion_abandoned') pages.push(D.companions[e.id].sheet) })
   const rm = r.room ? D.rooms[r.room] : null
   if (rm?.npc && !eng.inParty(rm.npc)) pages.push(D.companions[rm.npc].sheet)
   const knightNear = eng.here().some(e => e.type === 'knight') || ev.includes('knight_glimpse') || ev.includes('trial_fail') ||
@@ -179,7 +182,7 @@ export function classifierPrompt(eng: Engine): string {
   const lastGm = [...eng.g.feed].reverse().find(f => f.type === 'gm')
   const scene = lastGm?.type === 'gm' ? lastGm.text.slice(-600) : 'none' // /api/interpret의 system 4000자 제한 안에서
   return `Classify a player's action in a Korean dungeon game. Reply with JSON only, no prose: {"tag":"...","arg":"...","intent":"...","missing_item":null,"improvised":null}
-tag is exactly one of: 공격 (attack; if he attacks together with a companion, arg = that companion's name), 회피 (dodge), 방어 (brace/block), 살핌 (look closely, study, search), 숨기 (hide, sneak, stay silent), 몸쓰기 (climb, run, jump, force), 말 (talk, persuade, provoke), 사용 (use a power; arg = power name), 동료 (help a fallen companion back to their feet; arg = name), 떠남 (deliberately leave a companion behind / abandon them; arg = name), 이동 (go to an exit; arg = exit id like 2B), 선택 (anything else; no risk).
+tag is exactly one of: 공격 (attack; if he attacks together with a companion, arg = that companion's name), 회피 (dodge), 방어 (brace/block), 살핌 (look closely, study, search), 숨기 (hide, sneak, stay silent), 몸쓰기 (climb, run, jump, force), 말 (talk, persuade, provoke), 사용 (use a power; arg = power name), 동료 (help a fallen companion back to their feet; arg = name), 떠남 (deliberately leave a companion behind / abandon them; arg = name), 이동 (go to an exit; arg = exit id like 2B; if he deliberately leaves a companion as bait or a decoy while going, arg = "2B, 버림: name"; if he carries or drags a fallen companion along, arg = "2B, 데리고: name"), 선택 (anything else; no risk).
 Exits: ${exits}. Companions with him: ${ready}${down ? `. Down: ${down}` : ''}. Powers: ${powers}. Enemies: ${enemies}.
 The PC carries only: ${owned}. Latest scene: """${scene}"""
 missing_item: the object's name if the player claims to hold or use something that is not carried and is not plausibly in the scene, on an enemy, or on a companion. Generic words for the carried weapon (검, 칼) and bare hands are not missing. Otherwise null.

@@ -74,6 +74,13 @@ export interface Rules {
   opening_bonus: number         // 빈틈·넘어짐: 이번 턴 적 명중 +
   prone_penalty: number         // 넘어짐: 다음 판정 −
   disengage_dc: number          // 이탈 판정 기본 목표 (+ 교전 중인 적 수 − 1)
+  bait_bonus: number            // 멀쩡한 동료를 미끼로 두고 이동할 때 이탈 판정 +
+  down_left_bonus: number       // 쓰러진 동료를 두고 이동할 때 이탈 판정 +
+  carry_penalty: number         // 쓰러진 동료를 데리고 이동할 때 이탈 판정 −
+  garret_counter_chance: number // 가렛이 공격한 적이 살아남았을 때 반격이 올 확률
+  garret_shield_chance: number[] // 위기에 방패가 나갈 확률 (신뢰 0–3)
+  garret_shield_injured_chance: number // 부상 중일 때 방패가 나갈 확률
+  garret_shield_hp: number      // 이번 피해로 HP가 이 값 이하가 되면 위기
   pages_per_extra_card: number  // 보상 카드 한 장 더 고르는 데 드는 책장
   companion_target_chance: number // 평타가 진우 대신 동료를 노릴 확률
   joint_bonus: number           // 협공 판정 +
@@ -213,7 +220,7 @@ export type GameEvent =
   | { type: 'reward_taken'; card: RewardCard }
   | { type: 'trial_unclear'; reason: 'clock' | 'requirement' | 'target' }
   | { type: 'companion_join' | 'npc_present' | 'companion_down' | 'companion_raised' | 'companion_found'; id: CompanionId }
-  | { type: 'companion_abandoned'; id: CompanionId; how: 'chosen' | 'left' | 'trust' }
+  | { type: 'companion_abandoned'; id: CompanionId; how: 'chosen' | 'bait' | 'left' | 'trust' }
   | { type: 'disengage_fail' | 'threshold' | 'note_blocked' }
   | { type: 'reinforcement'; name: string }
   | { type: 'ending'; id: EndingId }

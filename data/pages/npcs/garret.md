@@ -69,7 +69,7 @@ Get the knight and the witch to the top. In practice: hold every line between th
 </toward_pc>
 
 <ability>
-**방패** (the code fires it on its own, up to twice per floor): blocks one enemy attack completely. At trust 3, every attack for that turn. It looks like him slamming into the blow's path, shield first, knee buckling, holding.
+**방패** (the code fires it on its own, up to twice per floor, only when a blow that matters is about to land on the PC; otherwise he just fights): blocks that attack completely. At trust 3, every attack for the rest of that turn. It looks like him slamming into the blow's path, shield first, knee buckling, holding.
 **In the fight** (the code decides when): he swings beside the PC when the PC attacks or braces, and he takes the enemy's answer — he is the one who gets hit back. In a joint attack he calls the timing ("지금이오!").
 </ability>
 

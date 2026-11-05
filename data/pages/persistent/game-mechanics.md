@@ -54,11 +54,13 @@ Every choice ends with exactly one tag in square brackets. The code reads the ta
 | [동료: 이름] | pull a companion who is DOWN back to their feet (only when `<state>` marks them DOWN, here) |
 | [떠남: 이름] | leave a companion behind on purpose — abandoning them. Only offer it when the scene truly puts that choice in front of him. |
 | [이동: 방ID] | go to a listed exit, e.g. [이동: 2B] |
+| [이동: 방ID, 버림: 이름] | break away and leave a companion in this room as bait, e.g. [이동: 2B, 버림: 가렛]. Getting away is much easier, but the companion is gone for this dive and the others see it. Offer it as the ugly option when he is engaged and a companion is with him. |
+| [이동: 방ID, 데리고: 이름] | carry a companion who is DOWN along with him, e.g. [이동: 2B, 데리고: 가렛]. Breaking away is harder, but the companion stays with him, still DOWN. Without this tag a DOWN companion stays in the room. When a companion is DOWN and the PC can move, offer it. |
 | [선택] | a pure choice, no roll: a gesture, a word, a decision, standing still |
 
 Rules:
 - The tag must match the action. If the option swings a weapon, it's [공격].
-- In an encounter: at least one [공격], one [회피] or [방어], and one other kind of option. When a companion is on their feet, one of the options may be a joint attack ([공격: 이름]). Offer [이동] when fleeing is possible (breaking away from a fight is a dodge roll; if it fails he is stuck and gets hit).
+- In an encounter: at least one [공격], one [회피] or [방어], and one other kind of option. When a companion is on their feet, one of the options may be a joint attack ([공격: 이름]), except against the Knight or a mirror figure. Offer [이동] when fleeing is possible (breaking away from a fight is a dodge roll; if it fails he is stuck and gets hit).
 - When a companion is DOWN in this room, always offer [동료: 이름] — and make the cost of staying clear (the clock, the enemies).
 - Outside encounters: offer [이동] for the ways forward, and at least one [선택].
 - The ugly option is tagged like any other.
@@ -82,7 +84,7 @@ Defeated enemies drop torn pages of her book (찢긴 책장). The code counts th
 </rewards>
 
 <companions_down_and_left>
-A companion who is hit while already hurt goes DOWN: alive, unable to stand. If the PC leaves the room, a DOWN companion stays there ("left behind"); he can still come back for them before he climbs to the next floor. When he climbs the stairs, anyone not with him is lost for this dive — the code sends it as `companion_abandoned`. A companion whose trust is already 0 and drops again walks away on their own. Never decide any of this yourself: no companion leaves, falls, or returns unless the code says so.
+A companion who is hit while already hurt goes DOWN: alive, unable to stand. If the PC leaves the room without carrying them, a DOWN companion stays there ("left behind"); he can still come back for them before he climbs to the next floor. When he climbs the stairs, anyone not with him is lost for this dive — the code sends it as `companion_abandoned`. A companion whose trust is already 0 may walk away when they see him abandon someone; the code sends that too. Your `<trust>` tag cannot make anyone leave. Never decide any of this yourself: no companion leaves, falls, or returns unless the code says so.
 </companions_down_and_left>
 
 <hp>

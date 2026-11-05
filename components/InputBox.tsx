@@ -6,6 +6,16 @@ import type { Choice, GameData } from '@/lib/game/types'
 
 const D = gameData as unknown as GameData
 
+/** "2B, 버림: 가렛" → "이동: 치유사의 천막 · 가렛 버림" */
+function moveBadge(arg: string): string {
+  const room = D.rooms[arg.split(',')[0].trim()]?.name ?? arg
+  const extras = ['버림', '데리고'].flatMap(w => {
+    const m = arg.match(new RegExp(`${w}\\s*[:：]\\s*([^,\\s]+)`))
+    return m ? [`${m[1]} ${w}`] : []
+  })
+  return [`이동: ${room}`, ...extras].join(' · ')
+}
+
 /** 선택지 버튼 + 자유 입력. 자유 입력은 /api/interpret로 태그를 붙인 뒤 엔진이 판정한다. */
 export default function InputBox({ choices, disabled, onChoice, onFree }: {
   choices: Choice[]
@@ -38,8 +48,8 @@ export default function InputBox({ choices, disabled, onChoice, onFree }: {
               {c.tag && (
                 <span className="shrink-0 rounded border border-zinc-700 px-1.5 py-0.5 text-[11px] text-zinc-400 group-hover:border-cyan-700 group-hover:text-cyan-300">
                   {c.tag === '이동' && c.arg
-                    ? `이동: ${D.rooms[c.arg]?.name ?? c.arg}`
-                    : c.arg && c.tag !== '공격' ? `${c.tag}: ${c.arg}` : c.tag}
+                    ? moveBadge(c.arg)
+                    : c.arg && !(c.tag === '공격' && c.arg.includes('지형')) ? `${c.tag}: ${c.arg}` : c.tag}
                 </span>
               )}
             </button>
