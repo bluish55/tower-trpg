@@ -25,7 +25,9 @@ import StatusPanel from './StatusPanel'
 import DebugPanel, { type DebugInfo } from './DebugPanel'
 import { ArchiveOverlay, EndingOverlay, RewardOverlay, RunOverOverlay, SettingsOverlay } from './Overlays'
 
-const HISTORY_LIMIT = 20 // AI에게 보내는 대화 기록 (메시지 수)
+// AI에게 보내는 대화 기록 (메시지 수). 앞부분이 매 턴 바뀌면 캐시가 깨지므로 넘을 때 한 번에 자른다
+const HISTORY_LIMIT = 40
+const HISTORY_KEEP = 20
 const FEED_LIMIT = 400   // 화면/저장에 남기는 피드 항목 수
 
 /** AI가 선택지를 안 붙였을 때 쓰는 기본 선택지 */
@@ -151,7 +153,7 @@ export default function TowerGame() {
       { role: 'user', content: historyText(t, playerText) },
       { role: 'assistant', content: p.prose + (p.choices.length ? '\n\n' + p.choices.map(choiceLine).join('\n') : '') },
     )
-    while (g.history.length > HISTORY_LIMIT) g.history.splice(0, 2)
+    if (g.history.length > HISTORY_LIMIT) g.history.splice(0, g.history.length - HISTORY_KEEP)
     g.feed.push({ type: 'gm', text: p.prose, notices })
 
     const ending = t.events.find(e => e.type === 'ending')

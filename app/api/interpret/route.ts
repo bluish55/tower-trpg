@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       model: body.model,
       system: [{ type: 'text', text: body.system }],
       messages: [{ role: 'user', content: body.text }],
-      maxTokens: 300,
+      maxTokens: 2000, // 사고도 여기에 포함된다. 작으면 글자 없이 끝나 모든 입력이 [선택]으로 처리될 수 있다
       allowContinue: false,
     })
     const json = text.match(/\{[\s\S]*\}/)

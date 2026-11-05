@@ -30,22 +30,32 @@ export function resolveKey(bodyKey?: string): string | null {
   return null
 }
 
-export interface Usage { input: number; output: number; cache_created: number; cache_read: number }
+export interface Usage { input: number; output: number; thinking: number; cache_created: number; cache_read: number }
 
 type SystemBlock = { type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }
+
+/** 직전 GM 응답에 캐시 지점을 찍는다. 이번 턴 user 메시지는 다음 턴에 짧은 버전으로 바뀌어 다시 읽히지 않으므로 지점을 찍지 않는다 */
+export function markHistoryCache(messages: { role: 'user' | 'assistant'; content: string }[]): Anthropic.MessageParam[] {
+  const at = messages.length - 2
+  return messages.map((m, i) => (
+    i === at && m.role === 'assistant' && m.content.trim()
+      ? { role: m.role, content: [{ type: 'text' as const, text: m.content, cache_control: { type: 'ephemeral' as const } }] }
+      : m
+  ))
+}
 
 /** 응답이 max_tokens로 잘리면 잘린 지점부터 이어 쓰게 해서 붙인다 (최대 2번) */
 export async function callClaude(opts: {
   apiKey: string
   model?: string
   system: SystemBlock[]
-  messages: { role: 'user' | 'assistant'; content: string }[]
+  messages: Anthropic.MessageParam[]
   maxTokens?: number
   allowContinue?: boolean
 }): Promise<{ text: string; usage: Usage }> {
   const client = new Anthropic({ apiKey: opts.apiKey })
-  const usage: Usage = { input: 0, output: 0, cache_created: 0, cache_read: 0 }
-  const once = async (messages: { role: 'user' | 'assistant'; content: string }[]) => {
+  const usage: Usage = { input: 0, output: 0, thinking: 0, cache_created: 0, cache_read: 0 }
+  const once = async (messages: Anthropic.MessageParam[]) => {
     const res = await client.messages.create({
       model: pickModel(opts.model),
       max_tokens: opts.maxTokens ?? 4096,
@@ -55,6 +65,8 @@ export async function callClaude(opts: {
     const u = res.usage as unknown as Record<string, number>
     usage.input += u.input_tokens ?? 0
     usage.output += u.output_tokens ?? 0
+    // 사고 토큰은 output_tokens에 포함되어 출력 요금으로 청구된다. 응답에 없으면 0
+    usage.thinking += (res.usage as unknown as { output_tokens_details?: { thinking_tokens?: number } }).output_tokens_details?.thinking_tokens ?? 0
     usage.cache_created += u.cache_creation_input_tokens ?? 0
     usage.cache_read += u.cache_read_input_tokens ?? 0
     const text = res.content.filter(b => b.type === 'text').map(b => (b as { text: string }).text).join('')

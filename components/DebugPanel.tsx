@@ -8,7 +8,7 @@ export interface DebugInfo {
   pages: string[]            // 서버가 실제로 붙인 조건부 페이지
   user: string               // 이번 턴에 보낸 user 메시지 (state/resolution/event 포함)
   raw: string                // AI 원문 응답 (태그 포함)
-  usage?: { input: number; output: number; cache_created: number; cache_read: number }
+  usage?: { input: number; output: number; thinking?: number; cache_created: number; cache_read: number }
 }
 
 /** 개발용. 설정에서 '디버그 보기'를 켜면 보인다. */
@@ -31,7 +31,7 @@ export default function DebugPanel({ game, info }: { game: Game; info: DebugInfo
         ))}
         {info?.usage && (
           <span className="ml-auto text-zinc-500">
-            in {info.usage.input} · out {info.usage.output} · cache read {info.usage.cache_read} · write {info.usage.cache_created}
+            in {info.usage.input} · out {info.usage.output} (think {info.usage.thinking ?? 0}) · cache read {info.usage.cache_read} · write {info.usage.cache_created}
           </span>
         )}
       </div>

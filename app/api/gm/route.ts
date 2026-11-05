@@ -2,7 +2,7 @@
 // 서버는 프롬프트 페이지를 붙여 Claude에게 서술만 받아 돌려준다.
 import { NextRequest, NextResponse } from 'next/server'
 import { persistentContext, dynamicContext } from '@/lib/pages'
-import { callClaude, errorResponse, resolveKey } from '@/lib/anthropic'
+import { callClaude, errorResponse, markHistoryCache, resolveKey } from '@/lib/anthropic'
 
 interface GMRequestBody {
   apiKey?: string
@@ -11,8 +11,8 @@ interface GMRequestBody {
   messages: { role: 'user' | 'assistant'; content: string }[] // 최근 기록 + 이번 턴 메시지
 }
 
-const MAX_MESSAGES = 22
-const MAX_CHARS = 60_000
+const MAX_MESSAGES = 42 // 기록 40개(components/TowerGame.tsx HISTORY_LIMIT) + 이번 턴 + 여유
+const MAX_CHARS = 120_000
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,11 +33,11 @@ export async function POST(req: NextRequest) {
       apiKey,
       model: body.model,
       system: [
-        // persistent 블록에 캐시 마킹 — 내용이 같으면 두 번째 호출부터 캐시 히트
+        // 바뀌는 주기별로 캐시 지점을 찍는다: 항상 같은 지침 / 층과 동료 페이지 / 대화 기록(markHistoryCache)
         { type: 'text', text: persistentContext(), cache_control: { type: 'ephemeral' } },
-        ...(dyn.text ? [{ type: 'text' as const, text: dyn.text }] : []),
+        ...(dyn.text ? [{ type: 'text' as const, text: dyn.text, cache_control: { type: 'ephemeral' as const } }] : []),
       ],
-      messages,
+      messages: markHistoryCache(messages),
     })
     return NextResponse.json({ output: text, usage, pages: dyn.loaded })
   } catch (e) {
