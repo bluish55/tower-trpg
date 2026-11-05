@@ -79,16 +79,23 @@ function Item({ item }: { item: FeedItem }) {
   }
 }
 
-export default function ChatWindow({ feed, loading }: { feed: FeedItem[]; loading: boolean }) {
+export default function ChatWindow({ feed, loading, live }: { feed: FeedItem[]; loading: boolean; live: string }) {
   const endRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [feed.length, loading])
+  // 서술이 나오는 동안 아래를 따라가되, 플레이어가 위로 올려 읽는 중이면 끌어내리지 않는다
+  useEffect(() => {
+    if (!live) return
+    const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 200
+    if (nearBottom) endRef.current?.scrollIntoView({ block: 'end' })
+  }, [live])
 
   return (
     <div className="flex flex-col gap-4">
       {feed.map((it, i) => <Item key={i} item={it} />)}
-      {loading && <p className="animate-pulse text-sm text-zinc-500">탑이 이야기를 잇는 중…</p>}
+      {live && <div className="font-serif text-[15.5px] leading-[1.85] text-zinc-200"><Prose text={live} /></div>}
+      {loading && !live && <p className="animate-pulse text-sm text-zinc-500">탑이 이야기를 잇는 중…</p>}
       <div ref={endRef} />
     </div>
   )

@@ -23,6 +23,15 @@ export function parseTag(text: string): { tag: ActionTag; arg: string | null; la
   return { tag, arg: rest.join(':').trim() || null, label: text.replace(/\s*\[[^[\]]+\]\s*$/, '').trim() }
 }
 
+/** 스트리밍 중인 응답에서 지금까지의 서술만 뽑는다. 쓰다 만 태그와 선택지 번호는 보여주지 않는다 */
+export function liveProse(raw: string): string {
+  const cut = raw
+    .replace(/<intents>[\s\S]*$/, '')
+    .replace(/<[^>]*$/, '')
+    .replace(/\n\s*\d{0,2}[.)]?\s*$/, '')
+  return parseResponse(cut).prose
+}
+
 export function parseResponse(raw: string): ParsedResponse {
   const out: ParsedResponse = { prose: '', choices: [], trust: [], loud: false, intents: {} }
 

@@ -11,7 +11,7 @@ export function pickModel(m?: string): string {
 }
 
 /** SDK 오류를 한국어 메시지 + 원래 상태 코드로 */
-export function errorResponse(e: unknown) {
+export function errorInfo(e: unknown): { msg: string; status: number } {
   const status = typeof e === 'object' && e && 'status' in e && typeof (e as { status: unknown }).status === 'number'
     ? (e as { status: number }).status : 500
   const raw = e instanceof Error ? e.message : String(e)
@@ -20,6 +20,11 @@ export function errorResponse(e: unknown) {
     status === 404 ? `모델을 찾을 수 없습니다. 설정에서 모델 이름을 확인해 주세요. (${raw})` :
     status === 429 ? '요청이 너무 많거나 크레딧이 부족합니다. 잠시 후 다시 시도해 주세요.' :
     status === 529 ? 'Anthropic 서버가 혼잡합니다. 잠시 후 다시 시도해 주세요.' : raw
+  return { msg, status }
+}
+
+export function errorResponse(e: unknown) {
+  const { msg, status } = errorInfo(e)
   return NextResponse.json({ error: msg }, { status })
 }
 
@@ -52,16 +57,19 @@ export async function callClaude(opts: {
   messages: Anthropic.MessageParam[]
   maxTokens?: number
   allowContinue?: boolean
+  onText?: (delta: string) => void // 있으면 응답을 스트리밍한다
+  signal?: AbortSignal             // 플레이어가 나가면 생성을 멈춘다
 }): Promise<{ text: string; usage: Usage }> {
   const client = new Anthropic({ apiKey: opts.apiKey })
   const usage: Usage = { input: 0, output: 0, thinking: 0, cache_created: 0, cache_read: 0 }
   const once = async (messages: Anthropic.MessageParam[]) => {
-    const res = await client.messages.create({
-      model: pickModel(opts.model),
-      max_tokens: opts.maxTokens ?? 4096,
-      system: opts.system,
-      messages,
-    })
+    const params = { model: pickModel(opts.model), max_tokens: opts.maxTokens ?? 4096, system: opts.system, messages }
+    let res: Anthropic.Message
+    if (opts.onText) {
+      const stream = client.messages.stream(params, { signal: opts.signal })
+      stream.on('text', opts.onText)
+      res = await stream.finalMessage()
+    } else res = await client.messages.create(params, { signal: opts.signal })
     const u = res.usage as unknown as Record<string, number>
     usage.input += u.input_tokens ?? 0
     usage.output += u.output_tokens ?? 0

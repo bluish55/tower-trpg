@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { D, Engine, emptyArchive, newGame, tierOf } from '../lib/game/engine'
 import { applyFirstEntry, applyOpening, classifierPrompt, dynamicPages } from '../lib/game/prompt'
+import { liveProse, parseResponse } from '../lib/game/parse'
 import type { CompanionId, Intent, PartyMember } from '../lib/game/types'
 let fails = 0
 const ok = (c: boolean, msg: string) => { console.log((c ? '✓ ' : '✗ ') + msg); if (!c) fails++ }
@@ -404,6 +405,20 @@ function r1b(x: ReturnType<typeof fresh>) { x.r.room = '1B'; x.r.enemies['1B'] =
   const b = enter('3'); b.g.run.hp = 999; b.g.run.hidden = true
   b.e.resolve({ tag: '이동', arg: b.g.choices[4].arg, text: b.g.choices[4].label })
   ok(b.g.run.room === '1B', '성문 안으로 달리는 선택지가 실제로 1B로 이동')
+}
+// 21. 스트리밍 중 서술 표시
+{
+  const full = '문이 열렸다.\n\n나는 들어갔다.\n\n1. 벤다 [공격]\n2. 피한다 [회피]\n\n<trust npc="pio" delta="-1" reason="x" />\n<intents>1:promise,2:speak</intents>'
+  let leaked = false, regressed = false, prev = ''
+  for (let i = 1; i <= full.length; i++) {
+    const s = liveProse(full.slice(0, i))
+    if (/[[\]<>]|^\d+[.)]|\n\d+[.)]|trust|intents|promise|벤다|피한다/.test(s)) leaked = true
+    if (!s.startsWith(prev.slice(0, Math.max(0, prev.length - 1)))) regressed = true
+    prev = s
+  }
+  ok(!leaked, '스트리밍 중 선택지와 태그가 서술에 보이지 않음')
+  ok(!regressed, '스트리밍 중 서술이 앞으로만 늘어남')
+  ok(prev === parseResponse(full).prose, '마지막 표시가 최종 서술과 같음')
 }
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED')
 process.exit(fails ? 1 : 0)

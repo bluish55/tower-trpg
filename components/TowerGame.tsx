@@ -11,9 +11,10 @@
    ========================================================= */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { CircleHelp } from 'lucide-react'
 import { D, Engine, emptyArchive, newGame, newRun, newTurn } from '@/lib/game/engine'
 import { applyFirstEntry, applyOpening, classifierPrompt, dynamicPages, historyText, turnMessage } from '@/lib/game/prompt'
-import { parseResponse } from '@/lib/game/parse'
+import { liveProse, parseResponse } from '@/lib/game/parse'
 import { ACTION_TAGS, INTENTS } from '@/lib/game/types'
 import type { Archive, Choice, Game, Intent, PlayerAction, Turn } from '@/lib/game/types'
 import {
@@ -23,7 +24,7 @@ import ChatWindow from './ChatWindow'
 import InputBox from './InputBox'
 import StatusPanel from './StatusPanel'
 import DebugPanel, { type DebugInfo } from './DebugPanel'
-import { ArchiveOverlay, EndingOverlay, RewardOverlay, RunOverOverlay, SettingsOverlay } from './Overlays'
+import { ArchiveOverlay, EndingOverlay, HelpOverlay, RewardOverlay, RunOverOverlay, SettingsOverlay } from './Overlays'
 
 // AI에게 보내는 대화 기록 (메시지 수). 앞부분이 매 턴 바뀌면 캐시가 깨지므로 넘을 때 한 번에 자른다
 const HISTORY_LIMIT = 40
@@ -51,7 +52,8 @@ export default function TowerGame() {
   const [archive, setArchive] = useState<Archive>(loadArchive)
   const [game, setGame] = useState<Game | null>(loadGame)
   const [screen, setScreen] = useState<'title' | 'game'>('title')
-  const [panel, setPanel] = useState<null | 'settings' | 'archive'>(null)
+  const [panel, setPanel] = useState<null | 'settings' | 'archive' | 'help'>(null)
+  const [live, setLive] = useState('') // 스트리밍 중인 서술
   const [startAfterSettings, setStartAfterSettings] = useState(false)
   const [phaseOverlayHidden, setPhaseOverlayHidden] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -62,6 +64,12 @@ export default function TowerGame() {
   const busyRef = useRef(false)
   // API 호출은 항상 최신 설정을 쓴다 (설정 저장 직후 바로 시작하는 경우 포함)
   const settingsRef = useRef(settings)
+  const errorRef = useRef<HTMLDivElement>(null)
+
+  // 오류 안내는 피드 아래에 생기므로 보이도록 스크롤한다
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ block: 'center' })
+  }, [error])
 
   /* ---------------- 상태 저장 ---------------- */
   const commit = useCallback((g: Game) => {
@@ -110,6 +118,37 @@ export default function TowerGame() {
     return j
   }, [])
 
+  /** GM 서술을 스트리밍으로 받는다. 글자가 올 때마다 onText를 부르고, 끝나면 전체 결과를 돌려준다 */
+  const postStream = useCallback(async (url: string, body: object, onText: (delta: string) => void) => {
+    const { apiKey, model } = settingsRef.current
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ apiKey, model: model || undefined, ...body }),
+    })
+    if (!res.ok || !res.body) {
+      const j = await res.json().catch(() => ({}))
+      throw new Error(j.error ?? `HTTP ${res.status}`)
+    }
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    while (true) {
+      const { value, done } = await reader.read()
+      buffer += decoder.decode(value, { stream: !done })
+      const lines = buffer.split('\n')
+      buffer = done ? '' : lines.pop() ?? ''
+      for (const line of lines) {
+        if (!line.trim()) continue
+        const ev = JSON.parse(line)
+        if (ev.type === 'text') onText(ev.text)
+        else if (ev.type === 'error') throw new Error(ev.error)
+        else if (ev.type === 'done') return ev
+      }
+      if (done) throw new Error('응답이 중간에 끊겼습니다. 다시 시도해 주세요.')
+    }
+  }, [])
+
   /** 자유 입력 → 태그. 실패해도 게임은 멈추지 않는다 (위험 없는 [선택]으로 처리). */
   const classify = useCallback(async (g: Game, text: string): Promise<PlayerAction> => {
     try {
@@ -142,9 +181,18 @@ export default function TowerGame() {
   const narrate = useCallback(async (g: Game, t: Turn, playerText: string) => {
     const eng = new Engine(g)
     const msg = turnMessage(eng, t, playerText)
-    const j = await post('/api/gm', {
+    let raw = '', frame = 0
+    const j = await postStream('/api/gm', {
       pages: dynamicPages(eng, t),
       messages: [...g.history, { role: 'user', content: msg }],
+    }, delta => {
+      raw += delta
+      // 화면은 프레임당 한 번만 갱신한다
+      frame ||= requestAnimationFrame(() => { frame = 0; setLive(liveProse(raw)) })
+    }).finally(() => {
+      cancelAnimationFrame(frame)
+      frame = 0
+      setLive('')
     })
     const p = parseResponse(String(j.output ?? ''))
     setDebug({ pages: j.pages ?? [], user: msg, raw: j.output ?? '', usage: j.usage })
@@ -180,7 +228,7 @@ export default function TowerGame() {
     }
     setPhaseOverlayHidden(false)
     commit(g)
-  }, [post, commit])
+  }, [postStream, commit])
 
   const playerAct = useCallback((text: string, choice: Choice | null) => {
     if (!game) return
@@ -349,9 +397,17 @@ export default function TowerGame() {
     />
   )
 
+  const helpPanel = panel === 'help' && <HelpOverlay onClose={() => setPanel(null)} />
+  const helpButton = (className: string) => (
+    <button onClick={() => setPanel('help')} aria-label="게임 규칙 보기" title="게임 규칙" className={className}>
+      <CircleHelp className="size-5" aria-hidden />
+    </button>
+  )
+
   if (screen === 'title' || !game) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-8 bg-[radial-gradient(ellipse_at_top,#0e2a33,#050607_70%)] px-6 text-zinc-200">
+      <main className="relative flex min-h-screen flex-col items-center justify-center gap-8 bg-[radial-gradient(ellipse_at_top,#0e2a33,#050607_70%)] px-6 text-zinc-200">
+        {helpButton('absolute right-4 top-4 rounded p-1.5 text-zinc-400 hover:text-zinc-100')}
         <div className="text-center">
           <p className="text-xs tracking-[0.4em] text-cyan-400/80">AI TRPG</p>
           <h1 className="mt-3 font-serif text-4xl text-zinc-50 sm:text-5xl">꼭대기까지 데려다줄게</h1>
@@ -379,6 +435,7 @@ export default function TowerGame() {
         </div>
         {settingsPanel}
         {archivePanel}
+        {helpPanel}
       </main>
     )
   }
@@ -410,16 +467,17 @@ export default function TowerGame() {
             <span className="sm:hidden">기록</span><span className="hidden sm:inline">탐사 기록</span>
           </button>
           <button onClick={() => setPanel('settings')} className="rounded px-2 py-1 text-xs text-zinc-500 hover:text-zinc-200">설정</button>
+          {helpButton('rounded px-1.5 py-1 text-zinc-500 hover:text-zinc-200')}
         </span>
       </header>
 
       <div className={`mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[1fr_280px] ${hit === 'big' ? 'animate-[shake_.4s]' : ''}`}>
         <section className="flex min-w-0 flex-col gap-5">
           {mobileStatus && <div className="lg:hidden"><StatusPanel game={game} /></div>}
-          <ChatWindow feed={game.feed} loading={busy} />
+          <ChatWindow feed={game.feed} loading={busy} live={live} />
 
           {error && (
-            <div className="rounded-md border border-red-800 bg-red-950/40 p-3 text-sm">
+            <div ref={errorRef} className="rounded-md border border-red-800 bg-red-950/40 p-3 text-sm">
               <p className="text-red-200">{error.msg}</p>
               <div className="mt-2 flex gap-2">
                 <button onClick={() => { const { base, fn } = error; setError(null); void run(base, fn) }} className="rounded bg-red-800 px-3 py-1 text-xs text-white">다시 시도</button>
@@ -462,6 +520,7 @@ export default function TowerGame() {
       )}
       {settingsPanel}
       {archivePanel}
+      {helpPanel}
     </main>
   )
 }

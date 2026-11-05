@@ -87,14 +87,14 @@ AI는 코드가 피해를 준 턴에만 몸이 다치는 서술을 쓴다 (`game
 | `lib/game/storage.ts` | localStorage 저장/불러오기 |
 | `lib/pages.ts` | (서버) 프롬프트 페이지 로더 + 허용 목록 |
 | `lib/anthropic.ts` | (서버) Claude 호출, BYOK 키 처리, 잘린 응답 이어쓰기, 오류 메시지 |
-| `app/api/gm/route.ts` | 메인 GM 호출 |
+| `app/api/gm/route.ts` | 메인 GM 호출. 응답은 줄 단위 JSON 스트림 (`text` 여러 개 뒤에 `done` 또는 `error`) |
 | `app/api/interpret/route.ts` | 자유 입력 → 행동 태그 분류 |
 | `app/page.tsx` | 마운트 후 `TowerGame` 렌더 (저장 데이터가 브라우저에 있으므로) |
 | `components/TowerGame.tsx` | 턴 흐름 전체, 화면 구성 |
 | `components/ChatWindow.tsx` | 피드 (서술, 판정 결과, 시스템 알림) |
 | `components/InputBox.tsx` | 선택지 버튼 + 자유 입력 |
 | `components/StatusPanel.tsx` | 시험·HP·적·기척·장비·동료·쪽지 |
-| `components/Overlays.tsx` | 보상, 추방, 결말, 탐사 기록, 설정 |
+| `components/Overlays.tsx` | 보상, 추방, 결말, 탐사 기록, 설정, 게임 규칙(물음표 아이콘. 수치는 `game-data.json`에서 읽고 스포일러는 넣지 않는다) |
 | `components/DebugPanel.tsx` | 설정에서 켜면: 상태 JSON, 보낸 메시지, AI 원문, 토큰·캐시 |
 
 ## GM 출력 포맷
