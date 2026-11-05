@@ -233,6 +233,7 @@ export class Engine {
         t.events.push({ type: 'helm_shatter' })
       }
       if (e.hp <= 0) {
+        e.state = 'lost' // I11: hp=0인데 engaged로 남지 않도록
         r.knight.state = 'defeated'
         t.events.push({ type: 'knight_defeated' })
         this.log('knight', 'defeated')
@@ -245,6 +246,7 @@ export class Engine {
   /** 적이 쓰러질 때: 처치 수, 처치 시험 기록, 찢긴 책장 */
   private onKill(e: EnemyInst, t: Turn, line = true) {
     const r = this.r
+    e.state = 'lost' // hp=0인데 engaged로 남지 않도록 (I11)
     r.kills++
     r.slain[e.type] = true
     if (line) t.lines.push({ who: 'sys', text: `${e.name} 쓰러짐.` })

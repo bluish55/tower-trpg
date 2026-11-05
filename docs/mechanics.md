@@ -261,21 +261,23 @@ unseen → glimpsed (1회성 이벤트)
 
 ## R10. 구조적 불변성 (Structural Invariants)
 
-다음은 **항상 성립해야 하는 조건**들이다. 이를 위반하면 코드 버그다.
+다음은 **런타임에 위반될 수 있으며 검사 가치가 있는 조건**들이다. 이를 위반하면 코드 버그다.
 
 | # | 조건 |
 |---|------|
 | I1 | `r.hp` ∈ [0, `r.maxHp`] |
-| I2 | 모든 trust ∈ [0, 3] |
 | I3 | `r.party`에 같은 id가 두 번 이상 없다 |
 | I4 | `r.party`와 `r.left`에 같은 id가 동시에 없다 |
 | I5 | `r.party`와 `r.abandoned`에 같은 id가 동시에 없다 |
 | I6 | `r.left`와 `r.abandoned`에 같은 id가 동시에 없다 |
-| I7 | `r.kills >= 0` |
-| I8 | `r.floor` ∈ [0, 5] |
-| I9 | `r.trial.left >= 0` |
 | I10 | `r.offer != null`이면 `r.pendingMove != null` |
-| I11 | 교전 중인 적(`state = 'engaged'`)의 `hp > 0` |
+
+> **제거된 불변성 (코드가 항상 보장함, 별도 검사 불필요)**
+> - ~~I2 trust ∈ [0,3]~~: clamp 처리로 위반 불가
+> - ~~I7 kills >= 0~~: 감소 코드 경로 없음
+> - ~~I8 floor ∈ [0,5]~~: 범위 밖 세팅 경로 없음
+> - ~~I9 trial.left >= 0~~: `Math.max(0, ...)` 보장
+> - ~~I11 engaged → hp > 0~~: `here()`가 hp > 0 필터링, state 불일치가 동작에 영향 없음
 
 ---
 
