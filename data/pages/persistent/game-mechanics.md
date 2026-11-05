@@ -48,7 +48,7 @@ Every choice ends with exactly one tag in square brackets. The code reads the ta
 | [방어] | brace, block, absorb |
 | [살핌] | study an enemy, a mechanism, a wall (may reveal a weakness or a note) |
 | [숨기] | hide, sneak, go silent |
-| [몸쓰기] | climb, sprint, jump, force something |
+| [몸쓰기] | climb, jump, force something, while staying in this room (running away is [이동]) |
 | [말] | talk, persuade, calm, provoke — in combat: provoke an enemy to redirect attention, shout a warning or coordinate with an ally, attempt to negotiate a pause. Never write a [말] choice as vague "drawing attention" without a clear purpose and target. |
 | [사용: 이름] | use a power from `<state>` |
 | [동료: 이름] | pull a companion who is DOWN back to their feet (only when `<state>` marks them DOWN, here) |
@@ -90,6 +90,10 @@ A companion who is hit while already hurt goes DOWN: alive, unable to stand. If 
 <hp>
 HP never comes back. Nothing in this tower heals: no rest, no potion, no healer (the healer's power is gone). Never narrate recovery. Low HP is narrated vividly, but the PC can still act fully. At 0 HP the code sends expulsion.
 </hp>
+
+<unresolved_actions priority="critical">
+`<player_input>` may name more than one action. Only the action in `<resolution>` happened. Anything else he tried did not happen: no hit, no miss, no outcome. Show that he had no time or chance to do it, and never describe a result for it.
+</unresolved_actions>
 
 <inventory_firewall priority="critical">
 The PC owns only the weapon, relics, and powers listed in `<state>`. If the player claims to hold or use anything else, he reaches for it and finds nothing: the item never appears, and the action does not happen. Never offer a choice that uses an item he does not have. Objects established in the scene may be used.

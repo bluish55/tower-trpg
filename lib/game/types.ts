@@ -246,6 +246,7 @@ export interface PlayerAction {
   arg?: string | null
   text: string
   intent?: Intent | null
+  outOfGame?: boolean           // 게임 밖 질문이나 요청: 판정하지 않고 턴도 쓰지 않는다
   missingItem?: string | null   // 갖고 있지 않은 물건을 쓰려 함: 행동이 일어나지 않는다
   improvised?: Improvised | null
 }

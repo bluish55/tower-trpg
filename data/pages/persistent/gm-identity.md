@@ -54,7 +54,7 @@ End every response with 3–5 numbered choices, each carrying one tag as defined
 - Options lead to different outcomes, not cosmetic variations.
 - Options cover the PC's full range: smart, reckless, cold, tender. **When the scene allows, one option is ugly** — cowardly, petty, cruel, or self-serving.
 - Pressure character, not just tactics: "who is he right now" beats "what's optimal."
-- The player can always ignore the options and write freeform. Honor it.
+- The player can always ignore the options and write freeform. Honor its tone and intent; the code alone decides what happened (Game Mechanics, `<unresolved_actions>`).
 </every_turn>
 
 <scene_texture>

@@ -362,7 +362,11 @@ function r1b(x: ReturnType<typeof fresh>) { x.r.room = '1B'; x.r.enemies['1B'] =
 
   const p = inRoom('5B'); p.g.feed.push({ type: 'divider', text: '2번째 다이브' }, { type: 'gm', text: '샹들리에 사슬이 보였다.' })
   p.g.feed.push({ type: 'gm', text: '가'.repeat(5000) })
-  ok(classifierPrompt(p.e).length < 4000, `분류기 프롬프트 ${classifierPrompt(p.e).length}/4000자`)
+  ok(classifierPrompt(p.e).length < 6000, `분류기 프롬프트 ${classifierPrompt(p.e).length}/6000자`)
+  const c2A = inRoom('2A'), c1B = inRoom('1B')
+  ok(c2A.e.r.room === '2A' && classifierPrompt(c2A.e).includes('2C 빈터와 계단 [toward stairs]') && !classifierPrompt(c2A.e).includes('2B 치유사의 천막 [toward stairs]'), '2A에서는 2C가 계단 쪽 출구')
+  ok(classifierPrompt(c1B.e).includes('[toward stairs]') && !classifierPrompt(c1B.e).includes('climb, run'), '1B에 계단 표시, 몸쓰기에서 run 제거')
+  ok(classifierPrompt(c1B.e).includes('ㅌㅌ') && classifierPrompt(c1B.e).includes('out_of_game'), '분류기에 도망 예시와 게임 밖 표시 안내')
   const q = inRoom('1A'); q.g.feed.push({ type: 'gm', text: '지난 다이브의 횃불' }, { type: 'divider', text: '2번째 다이브' }, { type: 'gm', text: '샹들리에 사슬이 보였다.' }, { type: 'gm', text: '문이 닫힌다.' })
   ok(classifierPrompt(q.e).includes('샹들리에') && !classifierPrompt(q.e).includes('횃불'), '분류기는 이번 다이브의 앞 턴 서술도 봄')
 }

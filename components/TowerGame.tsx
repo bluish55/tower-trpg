@@ -118,6 +118,7 @@ export default function TowerGame() {
         tag: ACTION_TAGS.includes(j.tag) ? j.tag : '선택',
         arg: typeof j.arg === 'string' && j.arg ? j.arg : null,
         intent: INTENTS.includes(j.intent) ? (j.intent as Intent) : 'other',
+        outOfGame: j.out_of_game === true,
         missingItem: typeof j.missing_item === 'string' && j.missing_item.trim() ? j.missing_item.trim() : null,
         improvised: j.improvised === 'melee' || j.improvised === 'ranged' ? j.improvised : null,
         text,
@@ -219,6 +220,12 @@ export default function TowerGame() {
               improvised: choice.arg?.includes('지형') ? (choice.arg.includes('원거리') ? 'ranged' : 'melee') : null,
             }
           : await classify(g, text)
+        // 게임 밖 입력: 판정도 GM 호출도 없다. 턴이 흐르지 않고 선택지도 그대로 남는다
+        if (action.outOfGame) {
+          g.feed.push({ type: 'sys', notice: { kind: 'info', title: '게임 밖 입력', text: '게임 밖 질문에는 답하지 않아요. 턴은 쓰지 않았어요.' } })
+          commit(g)
+          return
+        }
         if (g.run.floor === 5) {
           // 5층: 선택지에 붙은 의도(<intents>)가 우선, 없으면 분류기에게 묻는다
           const fromChoice = choice ? g.run.intents[choice.n] : undefined

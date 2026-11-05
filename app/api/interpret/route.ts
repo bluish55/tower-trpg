@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
     const body: { apiKey?: string; model?: string; system: string; text: string } = await req.json()
     const apiKey = resolveKey(body.apiKey)
     if (!apiKey) return NextResponse.json({ error: 'API 키가 없습니다.' }, { status: 401 })
-    if (!body.text || body.text.length > 2000 || !body.system || body.system.length > 4000) {
+    if (!body.text || body.text.length > 2000 || !body.system || body.system.length > 6000) {
       return NextResponse.json({ error: 'bad request' }, { status: 400 })
     }
     const { text } = await callClaude({
