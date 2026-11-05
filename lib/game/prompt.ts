@@ -36,7 +36,8 @@ export function stateBlock(eng: Engine): string {
   L.push(`weapon: ${r.weapon.name} | relics: ${r.relics.join(', ') || 'none'} | powers: ${powers}`)
   const party = r.party.map(p => {
     const c = D.companions[p.id]
-    const status = p.uses >= 2 ? 'floor limit reached' : p.onCooldown ? `${p.uses}/2 uses, cooldown` : `${p.uses}/2 uses`
+    const cap = D.rules.companion_skill_uses
+    const status = p.uses >= cap ? 'floor limit reached' : p.onCooldown ? `${p.uses}/${cap} uses, cooldown` : `${p.uses}/${cap} uses`
     const body = p.down ? 'DOWN — cannot act; offer [동료: ' + c.name + '] to raise them; leaving the room leaves them behind unless he carries them with [이동: 방ID, 데리고: ' + c.name + ']'
       : p.injured ? 'hurt — resting this turn' : 'on their feet'
     return `${c.name} [${p.id}] (trust ${p.trust}/3, ${body}, ${c.ability} — ${status})`
@@ -179,13 +180,15 @@ export function classifierPrompt(eng: Engine): string {
   const enemies = eng.here().map(e => e.name).join(', ') || 'none'
   const top = r.floor === 5
   const owned = [r.weapon.name, ...r.relics, ...Object.values(r.powers).map(p => p.name)].join(', ')
-  const lastGm = [...eng.g.feed].reverse().find(f => f.type === 'gm')
-  const scene = lastGm?.type === 'gm' ? lastGm.text.slice(-600) : 'none' // /api/interpret의 system 4000자 제한 안에서
+  // 이번 다이브의 최근 서술. 앞 턴에 나온 물건도 알아보도록 넉넉히 넣되, /api/interpret의 system 4000자 제한 안에서
+  const feed = eng.g.feed
+  const diveStart = feed.map(f => f.type).lastIndexOf('divider') + 1
+  const scene = feed.slice(diveStart).flatMap(f => (f.type === 'gm' ? [f.text] : [])).slice(-3).join('\n').slice(-1800) || 'none'
   return `Classify a player's action in a Korean dungeon game. Reply with JSON only, no prose: {"tag":"...","arg":"...","intent":"...","missing_item":null,"improvised":null}
 tag is exactly one of: 공격 (attack; if he attacks together with a companion, arg = that companion's name), 회피 (dodge), 방어 (brace/block), 살핌 (look closely, study, search), 숨기 (hide, sneak, stay silent), 몸쓰기 (climb, run, jump, force), 말 (talk, persuade, provoke), 사용 (use a power; arg = power name), 동료 (help a fallen companion back to their feet; arg = name), 떠남 (deliberately leave a companion behind / abandon them; arg = name), 이동 (go to an exit; arg = exit id like 2B; if he deliberately leaves a companion as bait or a decoy while going, arg = "2B, 버림: name"; if he carries or drags a fallen companion along, arg = "2B, 데리고: name"), 선택 (anything else; no risk).
 Exits: ${exits}. Companions with him: ${ready}${down ? `. Down: ${down}` : ''}. Powers: ${powers}. Enemies: ${enemies}.
-The PC carries only: ${owned}. Latest scene: """${scene}"""
-missing_item: the object's name if the player claims to hold or use something that is not carried and is not plausibly in the scene, on an enemy, or on a companion. Generic words for the carried weapon (검, 칼) and bare hands are not missing. Otherwise null.
+The PC carries only: ${owned}. Recent scene: """${scene}"""
+missing_item: the object's name if the player claims to hold or use something that is not carried and is not plausibly in the scene, on an enemy, or on a companion. Generic words for the carried weapon (검, 칼) and bare hands are not missing. Ordinary things a place like this would hold (a stone, a plank) are not missing. When unsure, use null.
 improvised: only when tag is 공격 and the attack uses an object from the scene instead of the carried weapon: "ranged" if thrown or otherwise from a distance, "melee" if not. Otherwise null.
 ${top ? "Also set intent: promise (he keeps the promise — takes her the last step / says 꼭대기까지 데려다줄게), speak (talks to her), helm (puts on the knight's helm / takes the knight's place), leave (turns back, leaves), stay (stays with mom), other." : 'Set intent to "other".'}`
 }

@@ -1,6 +1,7 @@
 // 규칙 시나리오 검사: npx tsx --tsconfig tsconfig.json scripts/rules-check.ts
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { D, Engine, emptyArchive, newGame, tierOf } from '../lib/game/engine'
+import { classifierPrompt } from '../lib/game/prompt'
 import type { CompanionId, Intent, PartyMember } from '../lib/game/types'
 let fails = 0
 const ok = (c: boolean, msg: string) => { console.log((c ? '✓ ' : '✗ ') + msg); if (!c) fails++ }
@@ -294,6 +295,76 @@ function r1b(x: ReturnType<typeof fresh>) { x.r.room = '1B'; x.r.enemies['1B'] =
   ok(all3 > 0, '신뢰 3: 그 턴의 남은 공격까지 막음')
   ok(!jointUse, '협공 중인 가렛은 방패를 쓰지 않음')
   ok(maxUses === 2, '방패는 층당 2회')
+}
+// 18. 2차 리뷰 수정 사항
+{
+  const inRoom = (room: string, party: any[] = []) => {
+    const x = fresh(); const t0 = { lines: [], events: [], reveals: [], sys: [], codeNotes: [], dmgTaken: 0 } as any
+    ;(x.e as any).enterRoom(room, t0); x.r.hp = 100000; x.r.maxHp = 100000; x.r.trial = null; x.r.party = party
+    return x
+  }
+  const clear = (x: ReturnType<typeof inRoom>) => x.e.here().forEach(z => { z.hp = 0; z.state = 'lost' })
+
+  const a = inRoom('1B', [member('garret', { down: true, trust: 0 }), member('lira', { trust: 2 })]); clear(a)
+  a.e.resolve({ tag: '떠남', arg: '리라', text: '리라를 두고 간다' })
+  ok(a.r.abandoned.length === 1 && a.e.member('garret')?.down === true, '쓰러진 동료는 버림을 봐도 걸어서 떠나지 않음')
+  const b = inRoom('1B', [member('garret', { down: true, trust: 0 }), member('lira', { trust: 2 })]); clear(b)
+  b.e.resolve({ tag: '이동', arg: '1A, 데리고: 가렛, 버림: 리라', text: '간다' })
+  ok(b.r.abandoned.join() === 'lira' && b.e.member('garret')?.down === true, '데려가는 쓰러진 동료는 파티에 남음')
+
+  const c = inRoom('1B', [member('garret', { down: true })])
+  const ct = c.e.resolve({ tag: '이동', arg: '1A, 버림: 가렛', text: '간다' })
+  const cm = Number(ct.lines.find(l => l.text.includes('이탈'))?.text.match(/\) ([+-]\d+)/)?.[1])
+  for (let i = 0; c.r.room === '1B' && i < 50; i++) c.e.resolve({ tag: '이동', arg: '1A, 버림: 가렛', text: '간다' })
+  ok(cm === D.pc.mods['회피'] + D.rules.down_left_bonus && !c.r.abandoned.length && c.r.left.length === 1, `쓰러진 동료를 미끼로 지정해도 +${D.rules.down_left_bonus}, 남겨짐`)
+
+  const d = inRoom('1B', [member('garret')]); clear(d)
+  const dt = d.e.resolve({ tag: '이동', arg: '1A, 버림: 가렛', text: '간다' })
+  ok(dt.events.some(x => x.type === 'companion_abandoned' && (x as any).how === 'chosen'), '막는 적이 없으면 미끼가 아니라 그냥 두고 떠남')
+
+  let copied = 0, knightJoint = 0, afterDown = 0, downs = 0, maxDmg = 0, atkMod = NaN, noted = false
+  for (let i = 0; i < 3000; i++) {
+    const m = inRoom('4A'); const mz = m.e.here()[0]; mz.hp = 1000; mz.max = 1000
+    const mt = m.e.resolve({ tag: '공격', arg: null, text: '돌을 던진다', improvised: 'ranged' })
+    if (mt.lines.some(l => l.text.includes('따라 휘두르기'))) copied++
+
+    const k = inRoom('1A', [member('garret')]); const armor = k.e.here()[0]; armor.hp = 1
+    k.r.enemies['1A'].push((k.e as any).makeEnemy('knight')); k.r.knight.state = 'hunting'
+    const kt = k.e.resolve({ tag: '공격', arg: '가렛', text: '벤다' })
+    const pc = kt.lines.find(l => l.who === 'pc')?.text ?? ''
+    if (pc.includes('회색 기사') && pc.includes('협공')) knightJoint++
+
+    const s = inRoom('1B', [member('garret', { trust: 3, injured: true })])
+    s.r.enemies['1B'].push((s.e as any).makeEnemy('armor'))
+    const [x1, x2, x3] = s.e.here(); x1.step = 2; x2.step = 0; x3.step = 0
+    s.e.here().forEach(z => { z.hp = 1000; z.max = 1000 })
+    const texts = s.e.resolve({ tag: '선택', arg: null, text: '선다' }).lines.map(l => l.text)
+    const downAt = texts.findIndex(z => z.includes('쓰러졌다'))
+    if (downAt >= 0) { downs++; if (texts.slice(downAt).some(z => z.includes('방패가 막았다'))) afterDown++ }
+
+    const h = inRoom('1A'); h.r.weapon = { name: '창', dice: '1d8', atk: 1 }
+    const hz = h.e.here()[0]; hz.hp = 1000; hz.max = 1000
+    const ht = h.e.resolve({ tag: '공격', arg: '가렛', text: '돌을 던진다', improvised: 'ranged' })
+    const roll = ht.lines.find(l => l.who === 'pc')?.text ?? ''
+    atkMod = Number(roll.match(/\) ([+-]\d+)/)?.[1])
+    if (!roll.includes('대성공')) { const dm = ht.lines.map(l => l.text.match(/피해 (\d+) →.*\/1000/)).find(Boolean); if (dm) maxDmg = Math.max(maxDmg, Number(dm[1])) }
+
+    const j = inRoom('1A', [member('garret')]); j.e.here()[0].hp = 1000
+    const jt = j.e.resolve({ tag: '공격', arg: '가렛', text: '돌을 던진다', improvised: 'ranged' })
+    noted = jt.codeNotes.some(n => n.includes('strikes alone')) && !jt.lines.some(l => l.text.includes('협공'))
+  }
+  ok(copied > 0, `거울상은 던져도 그대로 따라 함 (${copied}/3000)`)
+  ok(!knightJoint, '협공 대상이 죽고 기사로 바뀌면 협공 해제')
+  ok(downs > 0 && !afterDown, `가렛이 쓰러지면 신뢰 3 방패도 끝남 (쓰러짐 ${downs}회)`)
+  ok(maxDmg > 0 && maxDmg <= 4, `지형지물 피해는 1d4 (최대 ${maxDmg})`)
+  ok(atkMod === D.pc.mods['공격'] - D.improvised_penalty, `무기 공격 보너스 없음 (보정 ${atkMod})`)
+  ok(noted, '지형지물 공격에 동료 이름이 있으면 혼자 공격 메모')
+
+  const p = inRoom('5B'); p.g.feed.push({ type: 'divider', text: '2번째 다이브' }, { type: 'gm', text: '샹들리에 사슬이 보였다.' })
+  p.g.feed.push({ type: 'gm', text: '가'.repeat(5000) })
+  ok(classifierPrompt(p.e).length < 4000, `분류기 프롬프트 ${classifierPrompt(p.e).length}/4000자`)
+  const q = inRoom('1A'); q.g.feed.push({ type: 'gm', text: '지난 다이브의 횃불' }, { type: 'divider', text: '2번째 다이브' }, { type: 'gm', text: '샹들리에 사슬이 보였다.' }, { type: 'gm', text: '문이 닫힌다.' })
+  ok(classifierPrompt(q.e).includes('샹들리에') && !classifierPrompt(q.e).includes('횃불'), '분류기는 이번 다이브의 앞 턴 서술도 봄')
 }
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED')
 process.exit(fails ? 1 : 0)

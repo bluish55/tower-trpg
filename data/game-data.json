@@ -37,6 +37,8 @@
     "down_left_bonus": 1,
     "carry_penalty": 1,
     "garret_counter_chance": 0.4,
+    "companion_skill_uses": 2,
+    "skill_repeat_chance": 0.05,
     "garret_shield_chance": [0.3, 0.5, 0.7, 0.9],
     "garret_shield_injured_chance": 0.2,
     "garret_shield_hp": 6,
@@ -653,5 +655,6 @@
   },
   "loud_threshold": 3,
   "notes_per_floor": 2,
-  "improvised_penalty": 2
+  "improvised_penalty": 2,
+  "improvised_dice": "1d4"
 }

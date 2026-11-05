@@ -42,8 +42,8 @@ Every choice ends with exactly one tag in square brackets. The code reads the ta
 |---|---|
 | [공격] | strike with the current weapon |
 | [공격: 이름] | strike together with a companion (가렛/피오/리라): a joint attack — the companion surely joins, the roll is easier, and the enemy's answer may land on that companion |
-| [공격: 지형] | strike up close with an object established in the scene (worse odds than the weapon) |
-| [공격: 지형 원거리] | throw an object established in the scene, or otherwise use it from a distance (worse odds; the code decides whether the target can strike back) |
+| [공격: 지형] | strike up close with an object established in the scene (worse odds and weaker than a weapon) |
+| [공격: 지형 원거리] | throw an object established in the scene, or otherwise use it from a distance (worse odds and weaker than a weapon; the code decides whether the target can strike back) |
 | [회피] | dodge, duck, roll away |
 | [방어] | brace, block, absorb |
 | [살핌] | study an enemy, a mechanism, a wall (may reveal a weakness or a note) |

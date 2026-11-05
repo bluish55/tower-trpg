@@ -361,7 +361,8 @@ export class Engine {
     this.log('abandon', `${id} ${how}`)
     // 그 장면을 본 동료들의 신뢰 −1 (스스로 떠난 경우는 제외 — 연쇄로 번지지 않게)
     if (how !== 'trust') {
-      for (const m of [...r.party]) this.changeTrust(m.id, -1, `${josa(name, '을', '를')} 버리는 걸 봤다`, out, t, true)
+      // 쓰러진 동료는 걸어서 떠날 수 없으니 목격자로 치지 않는다
+      for (const m of r.party.filter(p => !p.down)) this.changeTrust(m.id, -1, `${josa(name, '을', '를')} 버리는 걸 봤다`, out, t, true)
     }
   }
 
@@ -587,8 +588,8 @@ export class Engine {
 
       // 능력 자동 발동 (선배): 층당 2회, 연속 불가(5% 행운 돌파), 부상 중엔 쓰지 못한다.
       // 협공 중인 동료는 능력 대신 진우와 같이 친다. 가렛의 방패는 여기서 나가지 않는다 (tryShield).
-      let canSkill = m.uses < 2 && condition && !isJoint && !wasInjured
-      if (canSkill && wasOnCooldown && Math.random() >= 0.05) canSkill = false
+      let canSkill = m.uses < D.rules.companion_skill_uses && condition && !isJoint && !wasInjured
+      if (canSkill && wasOnCooldown && Math.random() >= D.rules.skill_repeat_chance) canSkill = false
 
       let skillFired = false
       if (canSkill && Math.random() < prob) {
@@ -686,12 +687,13 @@ export class Engine {
   /** 가렛의 방패: 평소에는 공격만 하다가, 진우가 위기에 맞는 순간에 뛰어든다.
    *  위기 = 예고된 큰 공격, 또는 이번 피해로 HP가 rules.garret_shield_hp 이하가 될 때. 층당 2회, 연속 불가(5% 돌파). */
   private tryShield(e: EnemyInst, mv: EnemyMove, dmg: number, ctx: Ctx, t: Turn): boolean {
-    if (ctx.blockAll) return true
     const r = this.r, m = this.member('garret')
-    if (!m || m.down || m.uses >= 2 || ctx.joint === 'garret') return false
+    if (!m || m.down) return false // 그 턴에 쓰러졌으면 신뢰 3의 방패도 끝난다
+    if (ctx.blockAll) return true
+    if (m.uses >= D.rules.companion_skill_uses || ctx.joint === 'garret') return false
     const bigHit = !!mv.label && !this.def(e).mirror
     if (!bigHit && r.hp - dmg > D.rules.garret_shield_hp) return false
-    if (ctx.garretCooldown && Math.random() >= 0.05) return false
+    if (ctx.garretCooldown && Math.random() >= D.rules.skill_repeat_chance) return false
     const chance = m.injured ? D.rules.garret_shield_injured_chance : D.rules.garret_shield_chance[m.trust]
     if (Math.random() >= chance) return false
     m.uses++
@@ -804,11 +806,12 @@ export class Engine {
     const killsBefore = r.kills
 
     // 협공: [공격: 가렛] — 그 동료가 반드시 같이 치고, 판정 +2, 반격은 그 동료에게. 태그 인자로만 정한다
-    if (tag === '공격' && !action.improvised) {
+    if (tag === '공격') {
       const id = namedCompanion(action.arg, '')
       const jm = id ? this.member(id) : undefined
       const target = jm ? this.findTarget(text) : undefined
-      if (jm && (jm.down || jm.injured)) t.codeNotes.push(`${D.companions[jm.id].name} cannot join the attack right now (hurt or down). The PC strikes alone.`)
+      if (jm && action.improvised) t.codeNotes.push(`${D.companions[jm.id].name} does not join this attack. The PC strikes alone with what he picked up.`)
+      else if (jm && (jm.down || jm.injured)) t.codeNotes.push(`${D.companions[jm.id].name} cannot join the attack right now (hurt or down). The PC strikes alone.`)
       // 기사와 거울상은 동료가 치지 못하고 동료를 노리지도 않아서 협공이 성립하지 않는다
       else if (jm && target && (target.type === 'knight' || this.def(target).mirror)) t.codeNotes.push(`${D.companions[jm.id].name} cannot join an attack on ${target.name}. The PC strikes alone.`)
       else if (jm && target) {
@@ -846,23 +849,25 @@ export class Engine {
       case '공격': {
         // 협공 대상을 동료가 먼저 쓰러뜨렸으면 남은 적을 친다. 남은 적이 없으면 휘두를 일도 없다
         const jointDown = !!ctx.jointTarget && ctx.jointTarget.hp <= 0
-        const e = (jointDown ? undefined : ctx.jointTarget) ?? this.findTarget(text)
+        if (jointDown) { ctx.joint = null; ctx.jointTarget = null } // 대상이 바뀌면 협공은 끝난다
+        const e = ctx.jointTarget ?? this.findTarget(text)
         if (!e && jointDown) { t.codeNotes.push('The target was already brought down by a companion this turn.'); break }
         if (!e) { this.check('공격', 8, 0, t, undefined, ctx); t.codeNotes.push('There is nothing here to strike.'); break }
         const improvised = action.improvised ?? null
         const ranged = improvised === 'ranged'
-        // 기사는 곧바로 다가온다. 다른 적도 같은 대상에게 연속으로 던지면 거리를 좁혀 온다
-        const keptAway = ranged && e.type !== 'knight' && prevRangedUid !== e.uid
+        // 기사는 곧바로 다가오고 거울상은 그대로 따라 한다. 다른 적도 같은 대상에게 연속으로 던지면 거리를 좁혀 온다
+        const keptAway = ranged && e.type !== 'knight' && !this.def(e).mirror && prevRangedUid !== e.uid
         if (ranged) r.lastRangedUid = e.uid
         if (keptAway) ctx.noCounterUid = e.uid
-        if (improvised) t.codeNotes.push(`The PC attacks with an object from the scene, not his weapon${!ranged ? '' : keptAway ? ', from a distance. The target cannot strike back this turn' : ', from a distance. The target closes the gap and acts as usual this turn'}.`)
-        const bonus = improvised ? -D.improvised_penalty : ctx.joint ? D.rules.joint_bonus : 0
+        if (improvised) t.codeNotes.push(`The PC attacks with an object from the scene, not his weapon${!ranged ? '' : keptAway ? ', from a distance. The target cannot strike back this turn' : this.def(e).mirror ? ', from a distance. The mirror figure copies him anyway' : ', from a distance. The target closes the gap and acts as usual this turn'}.`)
+        // 주운 물건에는 무기의 공격 보너스가 없다
+        const bonus = improvised ? -D.improvised_penalty - (r.weapon.atk ?? 0) : ctx.joint ? D.rules.joint_bonus : 0
         const label = `${this.displayName(e)} ${improvised ? '지형지물 ' : ''}공격${ctx.joint ? ` (${josa(D.companions[ctx.joint].name, '과', '와')} 협공)` : ''}`
         const res = this.check('공격', this.def(e).def, bonus, t, label, ctx)
         this.exposure(res.tier, true, ctx, t)
         if (!res.ok) break
         if (this.weakMatch(e, '공격', text)) { this.applyWeak(e, t); break }
-        let dmg = rollSpec(r.weapon.dice)
+        let dmg = rollSpec(improvised ? D.improvised_dice : r.weapon.dice)
         if (r.flags.fang && e.hp < e.max) dmg += 2
         if (!improvised && r.weapon.water && this.def(e).water) dmg += r.weapon.water
         if (res.tier === 'crit') dmg += 4
@@ -1056,10 +1061,12 @@ export class Engine {
     // [이동: 2B, 버림: 가렛]으로 고른 미끼, 또는 두고 가는 쓰러진 동료가 있으면 빠져나가기 쉽고,
     // [이동: 2B, 데리고: 가렛]으로 쓰러진 동료를 데려가면 어렵다
     const baitId = companionAfter(arg, '버림'), carryId = companionAfter(arg, '데리고')
-    const bait = baitId ? this.member(baitId) : undefined
+    // 미끼는 멀쩡한 동료만 된다. 쓰러진 동료를 이름으로 골라도 두고 가는 것으로 친다
+    const bait = baitId ? r.party.find(p => p.id === baitId && !p.down) : undefined
     const carried = carryId && carryId !== baitId ? r.party.find(p => p.id === carryId && p.down) : undefined
-    const leftDown = r.party.find(p => p.down && p !== bait && p !== carried)
-    if (!r.hidden && blockers.length) {
+    const leftDown = r.party.find(p => p.down && p !== carried)
+    const contested = !r.hidden && blockers.length > 0
+    if (contested) {
       const pio = this.member('pio')
       const pioHelp = pio && !pio.down && pio.trust >= 3 && pio !== bait ? 2 : 0
       const decoyBonus = bait ? D.rules.bait_bonus : leftDown ? D.rules.down_left_bonus : 0
@@ -1079,7 +1086,8 @@ export class Engine {
     r.hidden = false
     ctx.moved = true
     if (r.hp <= 0) return
-    if (bait) this.abandon(bait.id, 'bait', t.sys, t) // 스스로 고른 미끼: 이번 다이브에서 돌아오지 않는다
+    // 스스로 고른 미끼는 이번 다이브에서 돌아오지 않는다. 막는 적이 없으면 미끼가 아니라 그냥 두고 떠난 것이다
+    if (bait) this.abandon(bait.id, contested ? 'bait' : 'chosen', t.sys, t)
     // 쓰러진 동료는 따라오지 못한다
     if (!up) for (const m of r.party.filter(p => p.down && p !== carried)) this.leaveBehind(m, t)
     else this.confirmAtStairs(t, carried) // 계단을 오르는 순간: 곁에 없는 동료는 버림으로 확정

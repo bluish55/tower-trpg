@@ -78,6 +78,8 @@ export interface Rules {
   down_left_bonus: number       // 쓰러진 동료를 두고 이동할 때 이탈 판정 +
   carry_penalty: number         // 쓰러진 동료를 데리고 이동할 때 이탈 판정 −
   garret_counter_chance: number // 가렛이 공격한 적이 살아남았을 때 반격이 올 확률
+  companion_skill_uses: number  // 동료 능력의 층당 사용 횟수
+  skill_repeat_chance: number   // 직전 턴에 쓴 능력이 연속으로 나갈 확률
   garret_shield_chance: number[] // 위기에 방패가 나갈 확률 (신뢰 0–3)
   garret_shield_injured_chance: number // 부상 중일 때 방패가 나갈 확률
   garret_shield_hp: number      // 이번 피해로 HP가 이 값 이하가 되면 위기
@@ -100,6 +102,7 @@ export interface GameData {
   loud_threshold: number
   notes_per_floor: number
   improvised_penalty: number
+  improvised_dice: string
 }
 
 /* ---------- runtime state ---------- */
