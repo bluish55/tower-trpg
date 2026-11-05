@@ -177,19 +177,6 @@ export default function TowerGame() {
     commit(g)
   }, [post, commit])
 
-  // 추방 후 선택지를 고르면 탑 밖 장면을 먼저 거친다 (1회차 opening과 동일한 구조)
-  const startDiveOutside = useCallback(async (g: Game, text: string) => {
-    g.dive += 1
-    g.run = newRun(g.archive)
-    g.history = [] // 진우는 기억하지 못한다. 기억은 탐사 기록(사용자)에만 남는다.
-    g.phase = 'outside'
-    g.feed.push({ type: 'divider', text: `${g.dive}번째 다이브` }, { type: 'player', text })
-    const t = newTurn()
-    t.events.push({ type: 'dive_outside' })
-    showResolution(g, t)
-    await narrate(g, t, text)
-  }, [showResolution, narrate])
-
   const playerAct = useCallback((text: string, choice: Choice | null) => {
     if (!game) return
     let gMid: Game | null = null
@@ -197,7 +184,19 @@ export default function TowerGame() {
     void run(
       game,
       async g => {
-        if (g.phase === 'run_over') return startDiveOutside(g, text)
+        if (g.phase === 'run_over') {
+          // 추방 후 선택지를 고르면 탑 밖 장면을 먼저 거친다
+          g.dive += 1
+          g.run = newRun(g.archive)
+          g.history = [] // 진우는 기억하지 못한다. 기억은 탐사 기록(사용자)에만 남는다.
+          g.phase = 'outside'
+          g.feed.push({ type: 'divider', text: `${g.dive}번째 다이브` }, { type: 'player', text })
+          const t = newTurn()
+          t.events.push({ type: 'dive_outside' })
+          showResolution(g, t)
+          gMid = structuredClone(g); resolvedTurn = t
+          return narrate(g, t, text)
+        }
         if (g.phase === 'outside') {
           g.feed.push({ type: 'player', text })
           g.phase = 'mind'
@@ -218,6 +217,8 @@ export default function TowerGame() {
           action.intent = fromChoice ?? (choice ? (await classify(g, text)).intent : action.intent)
         }
         const t = new Engine(g).resolve(action)
+        // reward_offer는 narrate 전에 phase를 설정해야 새로고침 시 고착되지 않는다
+        if (t.events.some(e => e.type === 'reward_offer')) g.phase = 'reward'
         showResolution(g, t)
         gMid = structuredClone(g); resolvedTurn = t
         await narrate(g, t, text)
@@ -228,7 +229,7 @@ export default function TowerGame() {
         await narrate(structuredClone(gMid), resolvedTurn, text)
       },
     )
-  }, [game, run, startDiveOutside, showResolution, narrate, commit, classify])
+  }, [game, run, showResolution, narrate, commit, classify])
 
   const pickReward = useCallback((id: string) => {
     if (!game) return
