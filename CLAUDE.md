@@ -29,6 +29,9 @@ localStorage 저장 (진행, 탐사 기록, 설정)
 
 phase: `title → outside(다이브실) → mind(탑 안) ⇄ reward → run_over → (다음 다이브) … → ending`
 
+첫 시작 장면은 AI를 부르지 않는다. `data/game-data.json`의 `opening` 문구를 그대로 보여주고(`applyOpening`), 문구를 고칠 때도 여기만 고치면 된다.
+첫 다이브의 입장 장면도 시작 선택지 버튼을 누르면 고정 문구 `first_entry`를 쓴다(`applyFirstEntry`). `bridges`는 시작 선택지와 같은 순서여야 한다. 직접 입력했거나 2번째 다이브부터는 AI가 서술한다.
+
 ## 판정 (2d6)
 
 `2d6 + 보정 vs 목표(DC)`. 보정·DC는 `data/game-data.json`의 `pc.mods`, `dc`, 적의 `def`.

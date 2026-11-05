@@ -1,7 +1,7 @@
 // 규칙 시나리오 검사: npx tsx --tsconfig tsconfig.json scripts/rules-check.ts
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { D, Engine, emptyArchive, newGame, tierOf } from '../lib/game/engine'
-import { classifierPrompt } from '../lib/game/prompt'
+import { applyFirstEntry, applyOpening, classifierPrompt, dynamicPages } from '../lib/game/prompt'
 import type { CompanionId, Intent, PartyMember } from '../lib/game/types'
 let fails = 0
 const ok = (c: boolean, msg: string) => { console.log((c ? '✓ ' : '✗ ') + msg); if (!c) fails++ }
@@ -369,6 +369,41 @@ function r1b(x: ReturnType<typeof fresh>) { x.r.room = '1B'; x.r.enemies['1B'] =
   ok(classifierPrompt(c1B.e).includes('ㅌㅌ') && classifierPrompt(c1B.e).includes('out_of_game'), '분류기에 도망 예시와 게임 밖 표시 안내')
   const q = inRoom('1A'); q.g.feed.push({ type: 'gm', text: '지난 다이브의 횃불' }, { type: 'divider', text: '2번째 다이브' }, { type: 'gm', text: '샹들리에 사슬이 보였다.' }, { type: 'gm', text: '문이 닫힌다.' })
   ok(classifierPrompt(q.e).includes('샹들리에') && !classifierPrompt(q.e).includes('횃불'), '분류기는 이번 다이브의 앞 턴 서술도 봄')
+}
+// 19. 시작 장면은 항상 같은 고정 문구
+{
+  const a = newGame(null, emptyArchive()), b = newGame(null, emptyArchive())
+  applyOpening(a); applyOpening(b)
+  ok(JSON.stringify([a.feed, a.choices, a.history]) === JSON.stringify([b.feed, b.choices, b.history]), '시작 장면은 매번 동일')
+  ok(a.phase === 'outside' && a.feed.length === 1 && a.feed[0].type === 'gm' && a.feed[0].text === D.opening.prose, '시작 문구가 그대로 표시됨')
+  ok(a.choices.length === D.opening.choices.length && a.choices.every(c => c.tag === '선택' && !c.label.includes('[')), '시작 선택지는 모두 [선택]')
+  ok(a.history.length === 2 && a.history[0].role === 'user' && a.history[1].role === 'assistant', 'GM이 이어가도록 대화 기록에 남음')
+  const e = new Engine(a), t = e.enterTower()
+  ok(a.run.room === '1A' && t.events.some(x => x.type === 'enter_tower') && dynamicPages(e, t).includes('npcs/run-frame'), '다음 입력에서 탑으로 들어감')
+}
+// 20. 첫 다이브 입장 장면
+{
+  const enter = (n: string) => {
+    const g = newGame(null, emptyArchive()); applyOpening(g); g.phase = 'mind'
+    const e = new Engine(g), t = e.enterTower()
+    applyFirstEntry(g, t, n, '선택')
+    return { g, e, t, last: g.feed[g.feed.length - 1] as { type: 'gm'; text: string } }
+  }
+  ok(D.first_entry.bridges.length === D.opening.choices.length, '연결 문장 수 = 시작 선택지 수')
+  const texts = ['1', '2', '3'].map(n => enter(n).last.text)
+  ok(new Set(texts).size === 3 && texts.every((x, i) => x.startsWith(D.first_entry.bridges[i]) && x.endsWith(D.first_entry.prose)), '선택지마다 연결 문장만 다르고 뒤는 같음')
+  ok(!texts.join('').includes('투구') && !D.first_entry.choices.join('').includes('투구'), '약점 힌트(투구) 없음')
+  const a = enter('3')
+  ok(a.g.choices.map(c => c.tag).join() === '공격,회피,살핌,말,이동' && a.g.choices[4].arg === '1B', '입장 선택지 태그와 이동 대상')
+  ok(a.g.history.length === 4 && a.g.history[2].role === 'user' && a.g.history[3].content.includes('도련님'), '입장 장면이 대화 기록에 남음')
+  ok(a.g.run.room === '1A' && a.t.sys.some(s => s.kind === 'trial') && a.t.events.some(x => x.type === 'npc_present'), '시험 창과 가렛 등장 이벤트 유지')
+  a.g.run.hp = 999
+  const next = a.e.resolve({ tag: '말', arg: null, text: a.g.choices[3].label })
+  ok(next.lines.some(l => l.text.includes('가렛 설득')), '다음 턴에 가렛 설득 판정이 정상 동작')
+  ok(dynamicPages(a.e, next).includes('npcs/garret') && dynamicPages(a.e, next).includes('floors/floor-1'), '다음 턴 GM에게 층과 가렛 시트 전달')
+  const b = enter('3'); b.g.run.hp = 999; b.g.run.hidden = true
+  b.e.resolve({ tag: '이동', arg: b.g.choices[4].arg, text: b.g.choices[4].label })
+  ok(b.g.run.room === '1B', '성문 안으로 달리는 선택지가 실제로 1B로 이동')
 }
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED')
 process.exit(fails ? 1 : 0)

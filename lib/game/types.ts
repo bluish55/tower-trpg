@@ -103,6 +103,8 @@ export interface GameData {
   notes_per_floor: number
   improvised_penalty: number
   improvised_dice: string
+  opening: { prose: string; choices: string[] } // 첫 시작 장면. AI를 부르지 않고 항상 이 문구를 쓴다
+  first_entry: { bridges: string[]; prose: string; choices: string[] } // 첫 다이브 입장 장면. bridges는 시작 선택지와 같은 순서
 }
 
 /* ---------- runtime state ---------- */
@@ -218,7 +220,7 @@ export interface Game {
 export interface TurnLine { who: 'pc' | 'enemy' | 'ally' | 'sys'; text: string }
 export interface SysNotice { kind: 'trial' | 'clear' | 'fail' | 'reward' | 'join' | 'weak' | 'note' | 'trust' | 'info'; title: string; text: string }
 export type GameEvent =
-  | { type: 'opening' | 'enter_tower' | 'dive_start' | 'dive_outside' | 'trial_start' | 'trial_clear' | 'trial_fail' | 'knight_glimpse' | 'knight_confront' | 'helm_crack' | 'helm_shatter' | 'knight_defeated' | 'knight_yields' | 'knight_bypassed' | 'floor5' | 'witch' | 'expelled' }
+  | { type: 'enter_tower' | 'dive_start' | 'dive_outside' | 'trial_start' | 'trial_clear' | 'trial_fail' | 'knight_glimpse' | 'knight_confront' | 'helm_crack' | 'helm_shatter' | 'knight_defeated' | 'knight_yields' | 'knight_bypassed' | 'floor5' | 'witch' | 'expelled' }
   | { type: 'reward_offer'; cards: RewardCard[] }
   | { type: 'reward_taken'; card: RewardCard }
   | { type: 'trial_unclear'; reason: 'clock' | 'requirement' | 'target' }

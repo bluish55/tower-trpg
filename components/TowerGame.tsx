@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { D, Engine, emptyArchive, newGame, newRun, newTurn } from '@/lib/game/engine'
-import { classifierPrompt, dynamicPages, historyText, turnMessage } from '@/lib/game/prompt'
+import { applyFirstEntry, applyOpening, classifierPrompt, dynamicPages, historyText, turnMessage } from '@/lib/game/prompt'
 import { parseResponse } from '@/lib/game/parse'
 import { ACTION_TAGS, INTENTS } from '@/lib/game/types'
 import type { Archive, Choice, Game, Intent, PlayerAction, Turn } from '@/lib/game/types'
@@ -207,6 +207,13 @@ export default function TowerGame() {
           g.phase = 'mind'
           const t = new Engine(g).enterTower()
           showResolution(g, t)
+          // 첫 다이브에 버튼을 누르면 고정 장면으로 바로 시작한다 (직접 입력은 AI가 서술)
+          if (g.dive === 1 && choice) {
+            applyFirstEntry(g, t, choice.n, text)
+            setDebug(null)
+            commit(g)
+            return
+          }
           gMid = structuredClone(g); resolvedTurn = t
           return narrate(g, t, text)
         }
@@ -272,13 +279,11 @@ export default function TowerGame() {
   }, [game, run, showResolution, narrate])
 
   const beginOpening = useCallback((g0: Game) => {
-    void run(g0, async g => {
-      g.phase = 'outside'
-      const t = newTurn()
-      t.events.push({ type: 'opening' })
-      await narrate(g, t, '(시작)')
-    })
-  }, [run, narrate])
+    const g = structuredClone(g0)
+    applyOpening(g)
+    setError(null)
+    commit(g)
+  }, [commit])
 
   const startGame = useCallback((fresh: boolean) => {
     let g = game

@@ -5,7 +5,8 @@
    Game Mechanics 페이지가 약속한 정보와 1:1로 맞춘다.
    ========================================================= */
 import { D, Engine } from './engine'
-import type { GameEvent, Turn } from './types'
+import { parseResponse } from './parse'
+import type { Game, GameEvent, Turn } from './types'
 import { SAFE_KNIGHT } from './types'
 
 export function stateBlock(eng: Engine): string {
@@ -85,7 +86,6 @@ const COMPANION_INTRO: Record<string, string> = {
 
 function eventText(e: GameEvent, dive: number): string {
   switch (e.type) {
-    case 'opening': return 'Dive 1. The PC is outside the mind, in the dive room. Play the first-dive opening from the Run Frame page. Do not enter the tower yet. End with choices about how he goes in (all [선택]).'
     case 'enter_tower': return 'He lies down; the dive begins. Narrate the fall into her mind and his arrival at the foot of the tower (Floor 1, room 1A), in the book\'s opening — and that he is holding a wooden practice sword he does not remember picking up.'
     case 'dive_outside': return `Dive ${dive}. He is back in the dive room — he remembers nothing from inside. The player\'s action is in <player_input>. Narrate 3–5 sentences: the chair, the room, how that action lands in his body right now. Do not enter the tower. End with 2–3 choices about lying down again (all [선택]).`
     case 'dive_start': return `He lies down again. Narrate the fall and arrival at room 1A in 2–3 sentences. Pick up directly from the moment he closes his eyes — no chair scene.`
@@ -139,6 +139,28 @@ export function turnMessage(eng: Engine, t: Turn, playerText: string): string {
   return parts.join('\n\n')
 }
 
+/** 첫 시작 장면: AI를 부르지 않고 고정 문구를 쓴다. 다음 턴의 GM이 이어가도록 대화 기록에도 남긴다 */
+export function applyOpening(g: Game) {
+  const raw = `${D.opening.prose}\n\n${D.opening.choices.map((c, i) => `${i + 1}. ${c}`).join('\n')}`
+  const p = parseResponse(raw)
+  g.phase = 'outside'
+  g.feed.push({ type: 'gm', text: p.prose })
+  g.choices = p.choices
+  g.history.push({ role: 'user', content: '<player_input>(시작)</player_input>' }, { role: 'assistant', content: raw })
+}
+
+/** 첫 다이브 입장 장면: 시작 선택지 버튼을 누르면 AI 없이 고정 문구를 쓴다. 직접 입력은 지금처럼 AI가 서술한다 */
+export function applyFirstEntry(g: Game, t: Turn, choiceN: string, playerText: string) {
+  const e = D.first_entry
+  const bridge = e.bridges[Number(choiceN) - 1]
+  const prose = bridge ? `${bridge}\n\n${e.prose}` : e.prose
+  const raw = `${prose}\n\n${e.choices.map((c, i) => `${i + 1}. ${c}`).join('\n')}`
+  const p = parseResponse(raw)
+  g.feed.push({ type: 'gm', text: p.prose })
+  g.choices = p.choices
+  g.history.push({ role: 'user', content: historyText(t, playerText) }, { role: 'assistant', content: raw })
+}
+
 /** 대화 기록에 남길 짧은 버전 (상태 블록 없이) */
 export function historyText(t: Turn, playerText: string): string {
   const b: string[] = []
@@ -153,7 +175,7 @@ export function historyText(t: Turn, playerText: string): string {
 export function dynamicPages(eng: Engine, t: Turn): string[] {
   const r = eng.r, pages: string[] = []
   const ev = t.events.map(e => e.type)
-  if (!r.floor || ev.some(x => ['opening', 'enter_tower', 'dive_start', 'dive_outside', 'expelled'].includes(x))) pages.push('npcs/run-frame')
+  if (!r.floor || ev.some(x => ['enter_tower', 'dive_start', 'dive_outside', 'expelled'].includes(x))) pages.push('npcs/run-frame')
   if (r.floor) pages.push(`floors/floor-${r.floor}`)
   r.party.forEach(p => pages.push(D.companions[p.id].sheet))
   // 이번 턴에 떠난 동료는 파티에 없지만, 이별 장면에 시트가 필요하다

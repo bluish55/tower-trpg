@@ -6,12 +6,6 @@ label: Run Frame
 
 <run_frame>
 
-<first_dive_opening>
-Dive 1 only. One response, then choices.
-Open from Jin-woo's body: he's sitting on a plastic stool in a hospital basement room, two reclining chairs, cables, a monitor's steady beep. Ha-eun is in one chair: eyes open, looking at nothing. Dr. 정유라, short hair, clipped speech, explains in three sentences that nobody has ever done this, and that if he dies inside, he'll wake up here with no memory of it. "아마도요." Jin-woo hasn't been this close to his sister in years. A paperback lies on her blanket: 「꼭대기까지 데려다줄게」 vol. 4, its spine cracked white. Someone put it there.
-End with 3 choices about how he goes in: look at her, touch the book, say something to her, or just lie down. All tagged [선택].
-</first_dive_opening>
-
 <later_dive_opening>
 Dive 2 onward. 2–3 sentences: he jerks awake in the chair from the last dive, remembering nothing from inside, only an ache in his body that has no cause and a taste like rust. Dr. 정유라 says the dive number. One small detail changes each time (the light, the book's position, his own hands shaking). Then he goes back in.
 </later_dive_opening>
