@@ -33,15 +33,28 @@ phase: `title → outside(다이브실) → mind(탑 안) ⇄ reward → run_ove
 
 `2d6 + 보정 vs 목표(DC)`. 보정·DC는 `data/game-data.json`의 `pc.mods`, `dc`, 적의 `def`.
 
-| 결과 | 조건 |
-|------|------|
-| 대성공 | 합계 ≥ DC+5, 또는 6·6 |
-| 성공 | 합계 > DC |
-| 부분 성공 | 합계 = DC |
-| 실패 | DC−1 ~ DC−3 |
-| 대실패 | DC−4 이하, 또는 1·1 |
+| 결과 | 조건 | 대가 (교전 중) |
+|------|------|------|
+| 대성공 | 합계 ≥ DC+5, 또는 6·6 | — |
+| 성공 | 합계 ≥ DC (동점 처리는 `rules.tie_success`) | — |
+| 실패 | DC−1 ~ DC−3 | 공격·살핌이면 **빈틈**: 이번 턴 적 명중 +2 |
+| 대실패 | DC−4 이하, 또는 1·1 | **넘어짐**: 빈틈 + 다음 판정 −2 |
 
-`lib/game/engine.ts`의 `tierOf()`.
+부분 성공은 없다 (11-04). `lib/game/engine.ts`의 `tierOf()`, `exposure()`.
+AI는 코드가 피해를 준 턴에만 몸이 다치는 서술을 쓴다 (`game-mechanics.md` `<results>`).
+
+## 이동·전투·동료 (11-04 피드백 반영)
+
+- **이탈 판정:** 교전 중 [이동] = 회피 판정, 목표 `rules.disengage_dc` + (막는 적 수 − 1). 실패하면 그 방에 남고 적이 친다. 숨은 상태·피오 샛길·시험 실패로 내려온 기사는 막지 않음.
+- **쪽지:** 교전 중인 방에서는 못 읽는다. 들어갈 때 공개되는 방(4A)도 정리해야 공개.
+- **찢긴 책장:** 적 처치 시 `enemies.*.pages`. 보상 화면에서 `rules.pages_per_extra_card`장으로 한 장 더.
+- **시험 종류:** `floors.*.trial.kind` = reach / slay(2층, 사냥꾼) / escort(3층, 피오).
+- **동료 (선배 자동 행동 위에 확장):** 능력 자동 발동·연계 공격·반격 부상은 선배 구현 그대로. 추가:
+  리라 조언(+1, `rules.lira_aid_chance`), 협공 `[공격: 이름]`(판정 +2, 반격은 그 동료에게), 평타가 동료를 노림(`rules.companion_target_chance`),
+  부상 중 또 맞으면 **쓰러짐** → `[동료: 이름]`으로 일으킴, 함께 방을 정리하면 신뢰 +1(층당 1번).
+- **버림:** `[떠남: 이름]` / 쓰러진 동료를 두고 방을 떠남(남겨짐, 계단 전엔 구출 가능) / 신뢰 0에서 더 떨어짐 — 셋 다 `run.abandoned`.
+  계단을 오를 때 곁에 없는 동료는 버림으로 확정. 본 동료 신뢰 −1.
+- **결말:** 버린 동료가 있으면 약속 결말 잠김(마녀가 이유를 말함). 약속 + 셋 다 함께 = `promise_together`. 동료는 5A(빈 페이지)에서 멈춘다.
 
 ## 프롬프트 구조 (캐싱)
 
@@ -91,17 +104,35 @@ phase: `title → outside(다이브실) → mind(탑 안) ⇄ reward → run_ove
 3. 주변을 살핀다 [살핌]
 ```
 
-태그: `공격 회피 방어 살핌 숨기 몸쓰기 말` (판정 있음), `사용 동료 이동 선택` (판정 없음 또는 자동).
+태그: `공격 회피 방어 살핌 숨기 몸쓰기 말` (판정 있음), `사용 이동 선택` (판정 없음, 이동은 교전 중이면 이탈 판정),
+`[공격: 이름]` 협공, `[동료: 이름]` 쓰러진 동료 일으키기, `[떠남: 이름]` 동료를 버림.
 형식을 바꾸려면 `lib/game/parse.ts`와 `data/pages/persistent/game-mechanics.md`를 같이 고칠 것.
 
 ## 남은 일
 
 - N9 (마녀의 소원) 쪽지 문구 — 지금은 자리표시자
 - 5층 엄마 장면, 결말 문구 다듬기
-- 난이도 조정 (`data/game-data.json`)
+- `draft — 경택 to revise` 표시된 대사 (witch-mom.md 두고 온 동료, endings.md 약속 — 함께)
+- 난이도: 실제 플레이로 확인 (`scripts/balance.ts`로 수치 비교)
+
+## 밸런스·규칙 검사 스크립트
+
+```bash
+npx tsx --tsconfig tsconfig.json scripts/rules-check.ts       # 규칙 시나리오 (이탈, 쪽지, 책장, 처치 시험, 남겨짐/버림, 결말)
+npx tsx --tsconfig tsconfig.json scripts/balance.ts 2000      # 숙련·초보 봇 각 2000판: 층별 도착 HP, 추방 층
+npx tsx --tsconfig tsconfig.json scripts/balance.ts 2000 '{"def":8,"rules":{"disengage_dc":8}}'  # 수치를 바꿔 비교
+```
+
+11-04 기준 결과 (3000판): 숙련 봇 4층 도착 HP 평균 13.0, 75%가 4층 끝까지 / 초보 봇 1–3층 추방 96%.
+봇은 약점을 다 알고 예고 공격을 다 피하므로 실제 사람보다 HP가 높게 나온다.
 
 ## 검증
 
 ```bash
 npx tsc --noEmit && npm run lint && npm run build
 ```
+
+## 되돌리기 태그
+
+큰 변경 전에 git 태그를 남긴다: `v-before-companion-rework`, `v-before-hp-rollback`, `v-before-feedback-1104`.
+되돌리려면 `git checkout <태그>`로 확인하고 필요한 커밋만 `git revert`.

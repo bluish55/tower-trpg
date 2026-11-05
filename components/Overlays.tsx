@@ -27,20 +27,37 @@ const Primary = (p: React.ButtonHTMLAttributes<HTMLButtonElement>) =>
   <button {...p} className={`rounded-md bg-cyan-700 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-600 disabled:opacity-40 ${p.className ?? ''}`} />
 
 /* ---------------- 보상 ---------------- */
-export function RewardOverlay({ game, disabled, onPick }: { game: Game; disabled: boolean; onPick: (id: string) => void }) {
+export function RewardOverlay({ game, disabled, onPick }: { game: Game; disabled: boolean; onPick: (ids: string[]) => void }) {
   const offer = game.run.offer ?? []
+  const need = D.rules.pages_per_extra_card
+  const canExtra = game.run.pages >= need
+  const [extra, setExtra] = useState(false)
+  const [picked, setPicked] = useState<string[]>([])
+  const toggle = (id: string) => {
+    if (!extra) { onPick([id]); return }
+    const next = picked.includes(id) ? picked.filter(x => x !== id) : [...picked, id].slice(-2)
+    setPicked(next)
+  }
   return (
     <Overlay>
       <Eyebrow>시험 통과</Eyebrow>
       <H2>탑이 보상을 내민다</H2>
-      <p className="mt-2 text-sm text-zinc-400">하나만 고를 수 있다. 피의 대가는 지금 바로 HP를 가져가고, HP는 돌아오지 않는다.</p>
+      <p className="mt-2 text-sm text-zinc-400">
+        {extra ? '두 장을 고른다.' : '하나만 고를 수 있다.'} 피의 대가는 지금 바로 HP를 가져가고, HP는 돌아오지 않는다.
+      </p>
+      {canExtra && (
+        <label className="mt-3 flex items-center gap-2 text-sm text-amber-200">
+          <input type="checkbox" checked={extra} onChange={e => { setExtra(e.target.checked); setPicked([]) }} />
+          찢긴 책장 {need}장을 내고 한 장 더 고른다 (가진 책장 {game.run.pages})
+        </label>
+      )}
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         {offer.map(c => (
           <button
             key={c.id}
             disabled={disabled || c.disabled}
-            onClick={() => onPick(c.id)}
-            className={`flex flex-col gap-1.5 rounded-lg border p-3 text-left transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-40 ${c.cost ? 'border-red-800 bg-red-950/20 hover:border-red-500' : 'border-zinc-700 bg-zinc-900 hover:border-cyan-500'}`}
+            onClick={() => toggle(c.id)}
+            className={`flex flex-col gap-1.5 rounded-lg border p-3 text-left transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-40 ${picked.includes(c.id) ? 'ring-2 ring-amber-300' : ''} ${c.cost ? 'border-red-800 bg-red-950/20 hover:border-red-500' : 'border-zinc-700 bg-zinc-900 hover:border-cyan-500'}`}
           >
             <span className="text-[11px] tracking-widest text-zinc-500">{c.kind}</span>
             <span className="font-serif text-lg text-zinc-50">{c.name}</span>
@@ -49,6 +66,11 @@ export function RewardOverlay({ game, disabled, onPick }: { game: Game; disabled
           </button>
         ))}
       </div>
+      {extra && (
+        <div className="mt-4 flex justify-end">
+          <Primary disabled={disabled || picked.length !== 2} onClick={() => onPick(picked)}>두 장 받기</Primary>
+        </div>
+      )}
     </Overlay>
   )
 }
@@ -61,6 +83,7 @@ function Recap({ sum }: { sum: RunSummary }) {
     ['받은 피해', String(sum.damage)],
     ['마지막 무기', sum.weapon],
     ['함께한 동료', sum.met.length ? sum.met.join(', ') : '없음'],
+    ...(sum.abandoned?.length ? [['두고 온 동료', sum.abandoned.join(', ')] as [string, string]] : []),
   ]
   return (
     <>

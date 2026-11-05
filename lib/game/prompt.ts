@@ -30,16 +30,22 @@ export function stateBlock(eng: Engine): string {
     const clock = r.trial.limit ? `turns left: ${r.trial.left}/${r.trial.limit}` : 'no time limit'
     L.push(`trial: ${r.trial.title} | goal: ${r.trial.goal} | ${clock}${r.trial.failed ? ' | FAILED' : ''}${req}`)
   }
-  L.push(`hp: ${Math.max(0, r.hp)}/${r.maxHp}${r.hp <= 6 ? ' (badly hurt)' : ''}`)
+  L.push(`hp: ${Math.max(0, r.hp)}/${r.maxHp}${r.hp <= 6 ? ' (badly hurt)' : ''}${r.prone ? ' | PRONE (knocked down: his next roll is worse)' : ''}`)
+  if (r.pages) L.push(`torn pages carried: ${r.pages}`)
   const powers = Object.values(r.powers).map(p => `${p.name} (${p.uses} uses)`).join(', ') || 'none'
   L.push(`weapon: ${r.weapon.name} | relics: ${r.relics.join(', ') || 'none'} | powers: ${powers}`)
   const party = r.party.map(p => {
     const c = D.companions[p.id]
     const status = p.uses >= 2 ? 'floor limit reached' : p.onCooldown ? `${p.uses}/2 uses, cooldown` : `${p.uses}/2 uses`
-    return `${c.name} [${p.id}] (trust ${p.trust}/3, ${c.ability} — ${status})`
+    const body = p.down ? 'DOWN — cannot act; offer [동료: ' + c.name + '] to raise them; leaving the room leaves them behind'
+      : p.injured ? 'hurt — resting this turn' : 'on their feet'
+    return `${c.name} [${p.id}] (trust ${p.trust}/3, ${body}, ${c.ability} — ${status})`
   })
   L.push(`party: ${party.length ? party.join('; ') : 'alone'}`)
-  if (rm.npc && !eng.inParty(rm.npc)) L.push(`here, not in party: ${D.companions[rm.npc].name} [${rm.npc}] — can be recruited with [말]`)
+  if (r.floor === 5 && r.room === '5B' && r.party.length) L.push(`companions: waiting at the threshold of the blank page (5A). They are characters of written volumes and cannot step onto the unwritten page. They are not in this room.`)
+  for (const x of r.left) L.push(`left behind, down: ${D.companions[x.id].name} in ${x.room} ${D.rooms[x.room].name}${x.room === r.room ? ' (HERE)' : ''} — can still be raised before he climbs the stairs`)
+  if (r.abandoned.length) L.push(`abandoned this dive: ${r.abandoned.map(id => D.companions[id].name).join(', ')} — they are gone for this dive${r.floor === 5 ? '; the witch knows who he left behind' : ''}`)
+  if (rm.npc && !eng.inParty(rm.npc) && !r.abandoned.includes(rm.npc)) L.push(`here, not in party: ${D.companions[rm.npc].name} [${rm.npc}] — can be recruited with [말]`)
   const es = eng.here()
   if (es.length) {
     L.push('enemies here:')
@@ -86,7 +92,18 @@ function eventText(e: GameEvent, dive: number): string {
     case 'trial_clear': return 'The trial is cleared as he reaches the stairs.'
     case 'reward_offer': return `The tower offers three rewards (the website shows them as cards): ${e.cards.map(c => `${c.name} (${c.kind}: ${c.desc}${c.cost ? `, costs ${c.cost} HP` : ''})`).join(' / ')}. Narrate the offering in 2–3 sentences. Write NO numbered choices.`
     case 'reward_taken': return `He takes: ${e.card.name} — ${e.card.desc}${e.card.cost ? `. It costs ${e.card.cost} HP immediately: show the price in his body` : ''}. Then he climbs to the next floor.`
-    case 'trial_unclear': return e.reason === 'clock' ? 'He climbs after failing the trial. No reward.' : 'He climbs without completing the trial (the boy is not with him). No reward. The tower does not acknowledge him.'
+    case 'trial_unclear': return e.reason === 'clock' ? 'He climbs after failing the trial. No reward.'
+      : e.reason === 'target' ? 'He climbs without bringing down the hunter. The trial is not cleared. No reward. Behind him, the horn sounds once more in the fog.'
+        : 'He climbs without completing the trial (the boy is not with him). No reward. The tower does not acknowledge him.'
+    case 'companion_down': return `${D.companions[e.id].name} goes down — conscious but unable to stand or fight. Show it plainly. Offer [동료: ${D.companions[e.id].name}] among the choices. If the PC leaves this room, ${D.companions[e.id].name} stays here.`
+    case 'companion_raised': return `The PC spends this moment pulling ${D.companions[e.id].name} back to their feet. Show the weight of it, and what ${D.companions[e.id].name} says or doesn't say.`
+    case 'companion_found': return `He finds ${D.companions[e.id].name} where he left them, still down. They are alive. How they look at him depends on their sheet. Offer [동료: ${D.companions[e.id].name}].`
+    case 'companion_abandoned': return e.how === 'chosen' ? `He leaves ${D.companions[e.id].name} behind by his own choice. Show ${D.companions[e.id].name}'s face as he goes, and how the others react. ${D.companions[e.id].name} is gone for this dive.`
+      : e.how === 'left' ? `He climbed the stairs while ${D.companions[e.id].name} was still lying below. There is no going back now. Let him know it, in the body, without a speech. ${D.companions[e.id].name} is gone for this dive.`
+        : `${D.companions[e.id].name} has had enough of him and walks away. Play it as their sheet says they would leave. They are gone for this dive.`
+    case 'disengage_fail': return 'He tried to break away and could not; the enemies close the gap and he is still in the fight, in the same room.'
+    case 'note_blocked': return 'There is writing in Ha-eun\'s hand here, but he cannot read it while the fight is on. Show it at the edge of his sight — he will have to clear the room first. Do not reveal any of its words.'
+    case 'threshold': return 'At the edge of the blank page the companions stop. They are characters of the written volumes; the unwritten page will not hold them. They can come no further. Play the parting at the threshold as the Floor 5 page describes. The last steps are his alone.'
     case 'trial_fail': return 'The trial clock has run out. The grey Knight descends into this room — visor down, unhurried. On this floor no weapon can hurt him. Make this the worst moment so far. Choices must include fleeing.'
     case 'knight_glimpse': return 'At the top of the stairs, through the fog: a grey knight, visor down, standing perfectly still, watching. Then he is gone. He says nothing. Do not describe his face.'
     case 'knight_confront': return 'The grey Knight stands on the last stair, visor down, sword drawn. This is the fight. He speaks in flat, final sentences.'
@@ -152,12 +169,14 @@ export function classifierPrompt(eng: Engine): string {
   const r = eng.r
   const rm = r.room ? D.rooms[r.room] : null
   const exits = rm ? rm.exits.map(x => `${x} ${D.rooms[x].name}`).join(', ') : 'none'
-  const ready = r.party.filter(p => p.uses < 2).map(p => D.companions[p.id].name).join(', ') || 'none'
+  const ready = r.party.filter(p => !p.down).map(p => D.companions[p.id].name).join(', ') || 'none'
+  const down = [...r.party.filter(p => p.down).map(p => p.id), ...r.left.filter(x => x.room === r.room).map(x => x.id)]
+    .map(id => D.companions[id].name).join(', ')
   const powers = Object.values(r.powers).filter(p => p.uses > 0).map(p => p.name).join(', ') || 'none'
   const enemies = eng.here().map(e => e.name).join(', ') || 'none'
   const top = r.floor === 5
   return `Classify a player's action in a Korean dungeon game. Reply with JSON only, no prose: {"tag":"...","arg":"...","intent":"..."}
-tag is exactly one of: 공격 (attack), 회피 (dodge), 방어 (brace/block), 살핌 (look closely, study, search), 숨기 (hide, sneak, stay silent), 몸쓰기 (climb, run, jump, force), 말 (talk, persuade, provoke), 사용 (use a power; arg = power name), 이동 (go to an exit; arg = exit id like 2B), 선택 (anything else; no risk).
-Exits: ${exits}. Companions ready: ${ready}. Powers: ${powers}. Enemies: ${enemies}.
+tag is exactly one of: 공격 (attack; if he attacks together with a companion, arg = that companion's name), 회피 (dodge), 방어 (brace/block), 살핌 (look closely, study, search), 숨기 (hide, sneak, stay silent), 몸쓰기 (climb, run, jump, force), 말 (talk, persuade, provoke), 사용 (use a power; arg = power name), 동료 (help a fallen companion back to their feet; arg = name), 떠남 (deliberately leave a companion behind / abandon them; arg = name), 이동 (go to an exit; arg = exit id like 2B), 선택 (anything else; no risk).
+Exits: ${exits}. Companions with him: ${ready}${down ? `. Down: ${down}` : ''}. Powers: ${powers}. Enemies: ${enemies}.
 ${top ? "Also set intent: promise (he keeps the promise — takes her the last step / says 꼭대기까지 데려다줄게), speak (talks to her), helm (puts on the knight's helm / takes the knight's place), leave (turns back, leaves), stay (stays with mom), other." : 'Set intent to "other".'}`
 }

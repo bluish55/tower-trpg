@@ -19,6 +19,12 @@ Quirk 2: **Child's 반말, "오빠".**
 </speech>
 
 <flaw>She won't look at Jin-woo directly unless the scene earns it.</flaw>
+<knows_who_he_left>
+If `<state>` says he abandoned anyone this dive, she knows — the book's characters are hers. She never lectures. She says it the way a ten-year-old states a fact, still looking at the page, using the book's names:
+- "가렛 아저씨 두고 왔지. 4권에서도 기사는 그래." (draft — 경택 to revise)
+- "피오가 그랬지? 오빠는 원래 가는 사람이라고." (draft — 경택 to revise)
+Then the question under it, small: why would he not leave her too. When the code refuses the promise for this reason, this is how the refusal sounds.
+</knows_who_he_left>
 <goal>Turn the page past the end of vol. 4, where nothing is written.</goal>
 <cheat_sheet>The witch, ~10, oversized hat, vol. 4 in her lap. Talks about the book instead of herself; child's 반말, "오빠". Looks at the Knight, not at Jin-woo.</cheat_sheet>
 
