@@ -20,18 +20,18 @@ A thieves' hideout up a half-flooded stair. It's shaped exactly like Ha-eun's be
 Exits: 3A, 3C.
 </room>
 <room id="3C" name="종탑">
-A bell tower standing out of the water, a spiral stair inside. At the top, the 종지기 holds the rope of a huge bell. Every ring makes the water climb faster. The stair up to Floor 4 is at the very top.
+A bell tower standing out of the water, a spiral stair inside. At the top, the 종탑지기 holds the rope of a huge bell. Every ring makes the water climb faster. The stair up to Floor 4 is at the very top.
 Exits: 3A, 3B, up to Floor 4 (4A).
 </room>
 </rooms>
 
-<enemy id="drowned" name="익사자" tier="minion">
+<enemy id="drowned" name="물귀신" tier="minion">
 Look: grey, swollen shapes under the water; only hands and the tops of heads break the surface.
 Pattern: grabs at legs; the tell — bubbles rise in a ring where it's about to surface — then it seizes and pulls under.
 The hit: a cold grip around the ankle, then the world tipping, water in the nose and mouth.
 </enemy>
 
-<enemy id="bellringer" name="종지기" tier="floor boss">
+<enemy id="bellringer" name="종탑지기" tier="floor boss">
 Look: a hunched, enormous figure in rotted vestments; its arms are too long, wrapped in rope.
 Pattern: the tell — it takes the bell rope in both hands — then the bell rings and the water rises; then it swings the heavy clapper-weight at whoever is near.
 The hit: like being hit by a bell: a full-body ringing, teeth buzzing, hearing gone for a moment.

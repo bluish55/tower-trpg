@@ -213,14 +213,14 @@ unseen → glimpsed (1회성 이벤트)
 ### R6.3 사냥꾼 (hunter)
 - 약점 `horn` (effect: 뿔피리): 사냥개들이 사냥꾼을 물고, 사냥꾼 1턴 기절.
 
-### R6.4 종지기 (bellringer)
+### R6.4 종탑지기 (bellringer)
 - `ring` 행동 시 `r.trial.left -= 1` (3층 시험 시계 감소).
 - 은신(`hideSkip`)에도 계속 행동한다.
 
-### R6.5 익사자 (drowned)
+### R6.5 물귀신 (drowned)
 - 약점 `height` (effect: 높은 곳으로): `몸쓰기` 성공으로 적용.
 
-### R6.6 빈 갑옷 (armor)
+### R6.6 리빙아머 (armor)
 - 약점 `helm` (effect: kill): 투구를 겨냥하면 즉사.
 
 ---
@@ -236,7 +236,7 @@ unseen → glimpsed (1회성 이벤트)
 
 ### R7.2 시험 시계
 - 매 턴 종료 시 `r.trial.left -= 1` (이동한 턴 포함, `floorChanged` 제외).
-- 종지기의 종 소리: 추가로 −1.
+- 종탑지기의 종 소리: 추가로 −1.
 - `left = 0` → `trial.failed = true`, `trial_fail` 이벤트, 기사 소환 (1~3층만).
 
 ### R7.3 시험 실패 후

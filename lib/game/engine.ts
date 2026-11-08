@@ -226,7 +226,7 @@ export class Engine {
     if (r.hp <= 0 && r.flags.breath && !r.flags.breathUsed) {
       r.flags.breathUsed = true
       r.hp = 1
-      t.lines.push({ who: 'sys', text: '익사자의 숨 — 쓰러질 피해를 받았지만 HP 1로 버틴다.' })
+      t.lines.push({ who: 'sys', text: '물귀신의 숨 — 쓰러질 피해를 받았지만 HP 1로 버틴다.' })
     }
   }
 
@@ -305,12 +305,12 @@ export class Engine {
       }
       case 'height':
         this.here().filter(x => x.type === 'drowned').forEach(x => { x.state = 'lost' })
-        t.lines.push({ who: 'sys', text: '약점 적중 — 물보다 높이 올라섰다. 익사자들이 닿지 못한다.' })
+        t.lines.push({ who: 'sys', text: '약점 적중 — 물보다 높이 올라섰다. 물귀신들이 닿지 못한다.' })
         break
       case 'rope':
         e.silenced = true
         e.stunned = 1
-        t.lines.push({ who: 'sys', text: '약점 적중 — 종 밧줄이 끊어졌다. 종이 멈추고, 종지기가 한 턴 비틀거린다.' })
+        t.lines.push({ who: 'sys', text: '약점 적중 — 종 밧줄이 끊어졌다. 종이 멈추고, 종탑지기가 한 턴 비틀거린다.' })
         break
     }
     this.log('weak_used', w.id)

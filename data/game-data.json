@@ -269,7 +269,7 @@
   },
   "enemies": {
     "armor": {
-      "name": "빈 갑옷",
+      "name": "리빙아머",
       "hp": 6,
       "def": 7,
       "cycle": [
@@ -372,7 +372,7 @@
       "pages": 2
     },
     "drowned": {
-      "name": "익사자",
+      "name": "물귀신",
       "hp": 6,
       "def": 7,
       "water": true,
@@ -410,7 +410,7 @@
       "pages": 1
     },
     "bellringer": {
-      "name": "종지기",
+      "name": "종탑지기",
       "hp": 18,
       "def": 9,
       "water": true,
@@ -588,7 +588,7 @@
       {
         "id": "breath",
         "kind": "피의 대가",
-        "name": "익사자의 숨",
+        "name": "물귀신의 숨",
         "desc": "한 번, 쓰러질 피해를 받아도 HP 1로 버틴다",
         "cost": 5
       }

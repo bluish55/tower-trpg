@@ -22,7 +22,7 @@ Exits: 1A, up to Floor 2 (2A).
 </room>
 </rooms>
 
-<enemy id="armor" name="빈 갑옷" tier="minion">
+<enemy id="armor" name="리빙아머" tier="minion">
 Look: plate armor with nobody inside, moving like it remembers drills. Joints scrape; the helm's eye-slit is dark.
 Pattern: a plain halberd jab; then the tell — it drags the halberd back across the stone with a long scream of metal — then an overhead chop.
 The hit: like being struck by a falling door. The arm goes numb to the shoulder.

@@ -33,7 +33,7 @@ export interface EnemyMove {
   label?: string
   tell?: string       // 예고 동작 서술
   warn?: string       // 화면에 표시할 경고
-  ring?: boolean      // 종지기: 시험 턴 -1
+  ring?: boolean      // 종탑지기: 시험 턴 -1
   kill?: boolean      // 기사의 처형
 }
 export interface Weakness {

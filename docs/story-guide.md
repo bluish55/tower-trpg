@@ -73,7 +73,7 @@ label: Floor 1
     </room>
   </rooms>
 
-  <enemy id="armor" name="빈 갑옷" tier="minion">
+  <enemy id="armor" name="리빙아머" tier="minion">
     외형. 이 적이 이상한 이유.
     공격 패턴 (예고 동작 → 실제 공격).
     맞았을 때 어떤 느낌인지.
