@@ -48,8 +48,8 @@ Every choice ends with exactly one tag in square brackets. The code reads the ta
 | [방어] | brace, block, absorb |
 | [살핌] | study an enemy, a mechanism, a wall (may reveal a weakness or a note) |
 | [숨기] | hide, sneak, go silent |
-| [몸쓰기] | climb, jump, force something, while staying in this room (running away is [이동]) |
-| [말] | talk, persuade, calm, provoke — in combat: provoke an enemy to redirect attention, shout a warning or coordinate with an ally, attempt to negotiate a pause. Never write a [말] choice as vague "drawing attention" without a clear purpose and target. |
+| [몸쓰기] | climb, jump, force something physical using the body, while staying in this room (running away is [이동]). **Only offer this when a specific object or feature in the current room description affords it** — a ledge, a rope, a gate, a stall roof. Name the object in the choice text. If the room has no such affordance, do not offer [몸쓰기]. |
+| [말] | talk, persuade, calm, challenge. **In combat, only offer [말] when: (a) a recruitable NPC is present in this room and hasn't joined yet, or (b) the scene has a specific coded dialogue moment with an enemy.** Do not offer [말] in combat otherwise — not to redirect attention, not to shout a warning, not to negotiate a pause. Outside combat, use freely. |
 | [사용: 이름] | use a power from `<state>` |
 | [동료: 이름] | pull a companion who is DOWN back to their feet (only when `<state>` marks them DOWN, here) |
 | [떠남: 이름] | leave a companion behind on purpose — abandoning them. Only offer it when the scene truly puts that choice in front of him. |
