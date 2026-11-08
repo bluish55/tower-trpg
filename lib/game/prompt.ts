@@ -12,6 +12,27 @@ import { SAFE_KNIGHT } from './types'
 export function stateBlock(eng: Engine): string {
   const g = eng.g, r = eng.r, L: string[] = []
   L.push(`dive: ${g.dive} (playthrough ${g.playthrough})`)
+  if (g.phase === 'floor_clear') {
+    const nextFloor = r.floor + 1
+    const f = D.floors[String(r.floor)]
+    const fNext = D.floors[String(nextFloor)]
+    L.push(`location: stairway — ascending from floor ${r.floor} (${f.name}) to floor ${nextFloor}${fNext ? ` (${fNext.name})` : ''}`)
+    L.push(`bridge: ${r.bridgeTurns ?? 0} dialogue turn(s) remain. [이동: ${r.bridgeTarget}] skips to the next floor now.`)
+    L.push(`hp: ${Math.max(0, r.hp)}/${r.maxHp}${r.hp <= 6 ? ' (badly hurt)' : ''}${r.prone ? ' | PRONE' : ''}`)
+    if (r.pages) L.push(`torn pages carried: ${r.pages}`)
+    const powers = Object.values(r.powers).map(p => `${p.name} (${p.uses} uses)`).join(', ') || 'none'
+    L.push(`weapon: ${r.weapon.name} | relics: ${r.relics.join(', ') || 'none'} | powers: ${powers}`)
+    const party = r.party.map(p => {
+      const c = D.companions[p.id]
+      const body = p.down ? `DOWN — offer [동료: ${c.name}]` : p.injured ? 'hurt — resting this turn' : 'on their feet'
+      return `${c.name} [${p.id}] (trust ${p.trust}/3, ${body})`
+    })
+    L.push(`party: ${party.length ? party.join('; ') : 'alone'}`)
+    if (r.abandoned.length) L.push(`abandoned this dive: ${r.abandoned.map(id => D.companions[id].name).join(', ')}`)
+    L.push('enemies here: none')
+    L.push(`noise: ${r.loud}/${D.loud_threshold}`)
+    return `<state>\n${L.join('\n')}\n</state>`
+  }
   if (!r.floor || !r.room) {
     L.push('location: outside the mind — 한빛대학교병원 임상연구동, the dive room')
     return `<state>\n${L.join('\n')}\n</state>`
@@ -114,6 +135,7 @@ function eventText(e: GameEvent, dive: number): string {
     case 'knight_defeated': return 'The Knight falls. He does not die like an enemy; his armor empties like the hollow soldiers on Floor 1, and the helm rolls to the PC\'s feet. The stair to the top is open.'
     case 'knight_yields': return 'The Knight lowers his sword. He does not forgive; he steps aside, and follows the PC up the stair at a distance. The way is open.'
     case 'knight_bypassed': return 'Garret holds the Knight with his shield while Pio pulls the PC through a gap — past him, onto the stair. The Knight turns and follows, slowly. The way is open.'
+    case 'floor_clear_start': return `The trial is behind him. He is on the stairs between floors — companions beside him, a moment to breathe before the next floor. No enemies. Two turns of real conversation before he climbs. Lead with the body: the step, the breath, what he almost says. Offer [말] with each companion present (use their name as arg, e.g. [말: 가렛]), [선택] for quiet beats, and [이동: ${e.target}] to climb now and skip. Each turn must change something — an admission, a question, a silence that wasn't there before.`
     case 'companion_join': return `${D.companions[e.id].name} joins the PC.`
     case 'npc_present': return COMPANION_INTRO[e.id]
     case 'reinforcement': return `Noise drew more: a ${e.name} arrives in the room now.`
@@ -174,6 +196,12 @@ export function historyText(t: Turn, playerText: string): string {
 /** 이번 턴에 불러올 조건부 페이지 (data/pages/ 기준 경로, 확장자 없음) */
 export function dynamicPages(eng: Engine, t: Turn): string[] {
   const r = eng.r, pages: string[] = []
+  if (eng.g.phase === 'floor_clear') {
+    pages.push(`stairs/stairs-${r.floor}-${r.floor + 1}`)
+    r.party.forEach(p => pages.push(D.companions[p.id].sheet))
+    t.events.forEach(e => { if (e.type === 'companion_abandoned') pages.push(D.companions[e.id].sheet) })
+    return [...new Set(pages)]
+  }
   const ev = t.events.map(e => e.type)
   if (!r.floor || ev.some(x => ['enter_tower', 'dive_start', 'dive_outside', 'expelled'].includes(x))) pages.push('npcs/run-frame')
   if (r.floor) pages.push(`floors/floor-${r.floor}`)

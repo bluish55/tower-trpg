@@ -16,7 +16,7 @@ const PERSISTENT = [
 ]
 
 // 조건부로 보낼 수 있는 페이지 (클라이언트가 요청할 수 있는 것만 허용)
-const DYNAMIC_ALLOWED = /^(floors\/floor-[1-5]|npcs\/(garret|lira|pio|knight-masked|knight-revealed|witch-mom|endings|run-frame))$/
+const DYNAMIC_ALLOWED = /^(floors\/floor-[1-5]|npcs\/(garret|lira|pio|knight-masked|knight-revealed|witch-mom|endings|run-frame)|stairs\/stairs-[1-4]-[2-5])$/
 
 function loadPage(id: string): string {
   const file = path.join(PAGES_DIR, `${id}.md`)

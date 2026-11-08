@@ -44,6 +44,23 @@ function fallbackChoices(eng: Engine): Choice[] {
   }))
 }
 
+function fallbackFloorClearChoices(eng: Engine): Choice[] {
+  const r = eng.r
+  const party = r.party.filter(p => !p.down)
+  const list: { text: string; tag: Choice['tag']; arg?: string }[] = []
+  party.forEach(p => {
+    list.push({ text: `${D.companions[p.id].name}에게 말을 건다`, tag: '말', arg: D.companions[p.id].name })
+  })
+  r.party.filter(p => p.down).forEach(p => {
+    list.push({ text: `${D.companions[p.id].name}을(를) 일으킨다`, tag: '동료', arg: D.companions[p.id].name })
+  })
+  list.push({ text: '말없이 걷는다', tag: '선택' })
+  if (r.bridgeTarget) list.push({ text: '다음 층으로 오른다', tag: '이동', arg: r.bridgeTarget })
+  return list.slice(0, 5).map((c, i) => ({
+    n: String(i + 1), text: `${c.text} [${c.tag}${c.arg ? ': ' + c.arg : ''}]`, label: c.text, tag: c.tag, arg: c.arg ?? null,
+  }))
+}
+
 const choiceLine = (c: Choice) => `${c.n}. ${c.text}`
 
 export default function TowerGame() {
@@ -223,6 +240,7 @@ export default function TowerGame() {
       g.choices = []
     } else {
       g.choices = p.choices.length ? p.choices
+        : g.phase === 'floor_clear' ? fallbackFloorClearChoices(eng)
         : g.phase === 'mind' ? fallbackChoices(eng)
           : [{ n: '1', text: '들어간다 [선택]', label: '들어간다', tag: '선택', arg: null }]
     }
@@ -265,7 +283,7 @@ export default function TowerGame() {
           gMid = structuredClone(g); resolvedTurn = t
           return narrate(g, t, text)
         }
-        if (g.phase !== 'mind') return
+        if (g.phase !== 'mind' && g.phase !== 'floor_clear') return
         g.feed.push({ type: 'player', text })
         commit(g)
         const action: PlayerAction = choice?.tag
@@ -313,7 +331,7 @@ export default function TowerGame() {
         const t = new Engine(g).takeReward(ids[0], ids[1])
         if (!cards.length || !t) return
         names = t.events.flatMap(e => (e.type === 'reward_taken' ? [e.card.name] : [])).join(', ')
-        g.phase = 'mind'
+        if (g.phase !== 'floor_clear') g.phase = 'mind'
         g.feed.push({ type: 'player', text: `보상: ${names}` })
         showResolution(g, t)
         gMid = structuredClone(g); resolvedTurn = t
@@ -353,7 +371,7 @@ export default function TowerGame() {
   /* ---------------- 키보드 1–9 ---------------- */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (screen !== 'game' || busy || panel || !game || !['mind', 'outside'].includes(game.phase)) return
+      if (screen !== 'game' || busy || panel || !game || !['mind', 'outside', 'floor_clear'].includes(game.phase)) return
       if ((e.target as HTMLElement)?.tagName === 'TEXTAREA' || (e.target as HTMLElement)?.tagName === 'INPUT') return
       if (!/^[1-9]$/.test(e.key)) return
       const c = game.choices.find(x => x.n === e.key)
@@ -441,7 +459,7 @@ export default function TowerGame() {
   }
 
   const r = game.run
-  const inputPhase = ['mind', 'outside', 'run_over'].includes(game.phase)
+  const inputPhase = ['mind', 'outside', 'run_over', 'floor_clear'].includes(game.phase)
   const warns = r.floor ? new Engine(game).engaged().filter(e => e.warn).length : 0
 
   return (

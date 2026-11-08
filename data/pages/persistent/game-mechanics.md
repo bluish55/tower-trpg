@@ -68,6 +68,19 @@ Rules:
 - If `<state>` lists a weakness the player knows, you may offer one option that uses it. The PC just does it; don't explain how he knew.
 </choice_tags>
 
+<floor_clear priority="high">
+When `<state>` shows "location: stairway" (floor_clear phase):
+- No enemies. No trial clock. The fight is over for this floor.
+- Companions are beside him on the stairs.
+- Two turns before he enters the next floor. `bridge:` in `<state>` shows how many remain.
+- Do NOT offer [공격], [회피], [방어], [몸쓰기], [숨기].
+- Offer [말: 이름] for each companion on their feet (e.g. [말: 가렛]). The roll is DC 9; success/fail shapes how the exchange lands. The code does not force a trust change — but a good [말] success earns one through your `<trust>` tag.
+- Offer [선택] for quiet moments — something he notices, something he doesn't say.
+- Always offer [이동: X] (from `bridge:` in `<state>`) to climb immediately.
+- Each turn must change something between the PC and a companion. This is not filler.
+- When the bridge turns reach 0 (or [이동] is used), the code transitions to the next floor automatically.
+</floor_clear>
+
 <enemies>
 Enemies act every turn they're engaged, whether or not the PC attacks them. `<state>` shows what each enemy is about to do. When an enemy is winding up (a tell), show the tell clearly in the prose, so an attentive player can answer it.
 Every enemy has a weakness. Unless `<state>` marks it known, neither you nor the PC knows it. Don't hint at it.

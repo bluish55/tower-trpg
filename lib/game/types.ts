@@ -24,7 +24,7 @@ export type CompanionId = 'garret' | 'lira' | 'pio'
 export type EndingId = 'promise' | 'promise_together' | 'forced' | 'knight' | 'alone' | 'stay'
 export type KnightState = 'unseen' | 'hunting' | 'guarding' | 'yielded' | 'bypassed' | 'defeated'
 export const SAFE_KNIGHT: KnightState[] = ['yielded', 'bypassed', 'defeated']
-export type Phase = 'title' | 'outside' | 'mind' | 'reward' | 'run_over' | 'ending'
+export type Phase = 'title' | 'outside' | 'mind' | 'floor_clear' | 'reward' | 'run_over' | 'ending'
 
 /* ---------- game data (data/game-data.json) ---------- */
 export interface EnemyMove {
@@ -172,6 +172,8 @@ export interface RunState {
   abandoned: CompanionId[]               // 이번 다이브에 버린 동료 (약속 결말 잠김)
   trustCleared: Record<string, boolean>  // "층:동료" — 함께 방 정리 신뢰 +1 (층당 1번)
   pendingRoomNote: Record<string, boolean> // 적이 남아 아직 못 읽은 방의 쪽지
+  bridgeTurns: number      // floor_clear 남은 대화 턴 (0이면 비활성)
+  bridgeTarget: string | null  // floor_clear 후 이동할 방 ID
 }
 
 export interface Archive {
@@ -226,6 +228,7 @@ export type GameEvent =
   | { type: 'trial_unclear'; reason: 'clock' | 'requirement' | 'target' }
   | { type: 'companion_join' | 'npc_present' | 'companion_down' | 'companion_raised' | 'companion_found'; id: CompanionId }
   | { type: 'companion_abandoned'; id: CompanionId; how: 'chosen' | 'bait' | 'left' | 'trust' }
+  | { type: 'floor_clear_start'; target: string }
   | { type: 'disengage_fail' | 'threshold' | 'note_blocked' }
   | { type: 'reinforcement'; name: string }
   | { type: 'ending'; id: EndingId }

@@ -163,7 +163,31 @@
   1. 파티 내 `down` 동료 → `leaveBehind`.
   2. `r.left` 중 현재 층 동료 → `abandon('left')`.
 
-### R4.3 사냥하는 기사 (hunting)
+### R4.3 계단 대화 (Floor Clear — `floor_clear` phase)
+
+플레이어가 계단(위층 출구)으로 이동할 때, 아래 조건이 모두 맞으면 `floor_clear` phase가 발동된다:
+- 동료가 1명 이상 파티에 있음
+- 시험을 통과했거나 (`cleared = true`) 해당 층에 시험이 없음 (`trial = null`)
+
+발동 조건이 맞지 않으면 (시험 실패, 동료 없음) 바로 다음 층으로 진입한다.
+
+**floor_clear 2턴 동안:**
+- 적 없음, 전투 판정 없음
+- [말: 이름]: DC 9 판정. 성공/실패가 서술에 반영되며 AI `<trust>` 태그로 신뢰 변화 가능
+- [동료: 이름]: DOWN 동료 일으키기
+- [선택]: 판정 없는 순간
+- [이동: 방ID]: 나머지 대화 턴 스킵, 즉시 다음 층 진입
+- 2턴 소진 시 자동으로 다음 층 진입
+
+**trust 획득 경로 변경 (11-08):**
+- 삭제: 방 정리 시 함께 싸운 동료 신뢰 +1 (`trustCleared`)
+- 대신: floor_clear의 [말] 성공으로 신뢰 획득
+
+**프롬프트 구조:**
+- `data/pages/stairs/stairs-X-Y.md`: 각 층 전환의 분위기·동료 비트 (협업자 작성)
+- `data/pages/persistent/game-mechanics.md`의 `<floor_clear>` 섹션: GM 지침
+
+### R4.4 사냥하는 기사 (hunting)
 - 시험 실패로 소환된 기사는 플레이어가 이동할 때마다 함께 이동한다 (현재 방에서 제거 → 목적지에 추가).
 
 ---

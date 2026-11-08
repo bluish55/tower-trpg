@@ -91,6 +91,7 @@ export function newRun(archive: Archive): RunState {
     kills: 0, damageTaken: 0, lastRangedUid: null, log: [],
     pages: 0, prone: false, aid: 0, foresight: false, slain: {},
     left: [], abandoned: [], trustCleared: {}, pendingRoomNote: {},
+    bridgeTurns: 0, bridgeTarget: null,
   }
 }
 
@@ -826,6 +827,8 @@ export class Engine {
       ctx.silent = true
     }
 
+    if ((r.bridgeTurns ?? 0) > 0) return this.resolveFloorClear(action)
+
     /* ---- top floor: endings ---- */
     if (r.floor === 5) {
       if (missing) { t.codeNotes.push(missingNote); return t }
@@ -1005,15 +1008,7 @@ export class Engine {
     /* ---- after effects ---- */
     if (r.room === '1A' && !this.inParty('garret') && !r.recruited.garret && !this.here().length) this.join('garret', t)
 
-    // 방을 정리했다 (이번 턴에 적을 쓰러뜨려 교전이 끝남): 함께 싸운 동료 신뢰 +1, 미뤄 둔 쪽지 공개
-    if (hadEngaged && !ctx.moved && !this.engaged().length && r.kills > killsBefore && r.room) {
-      for (const m of r.party.filter(p => !p.down)) {
-        const key = `${r.floor}:${m.id}`
-        if (r.trustCleared[key]) continue
-        r.trustCleared[key] = true
-        this.changeTrust(m.id, 1, '함께 싸워 방을 정리했다', t.sys, t)
-      }
-    }
+    // 미뤄 둔 쪽지 공개
     if (r.room && r.pendingRoomNote[r.room] && !this.engaged().length) {
       r.pendingRoomNote[r.room] = false
       this.revealFloorNote(this.room().floor, t)
@@ -1116,6 +1111,14 @@ export class Engine {
       } else if (tr && r.floor <= 3) {
         t.events.push({ type: 'trial_unclear', reason: tr.failed ? 'clock' : !slainOk ? 'target' : 'requirement' })
       }
+      // floor_clear: 동료가 있고 시험 통과 또는 시험 없는 층이면 계단 대화 2턴
+      if (r.party.length > 0 && (!tr || !!cleared)) {
+        this.g.phase = 'floor_clear'
+        r.bridgeTurns = 2
+        r.bridgeTarget = target
+        t.events.push({ type: 'floor_clear_start', target })
+        return
+      }
       this.enterRoom(target, t)
     } else {
       if (huntingKnight && r.room) r.enemies[r.room] = r.enemies[r.room].filter(e => e !== huntingKnight)
@@ -1125,6 +1128,55 @@ export class Engine {
         ;(r.enemies[target] ??= []).push(huntingKnight)
       }
     }
+  }
+
+  /* ---------------- floor clear (stairway dialogue) ---------------- */
+  resolveFloorClear(action: PlayerAction): Turn {
+    const r = this.r, t = newTurn()
+    r.turn++
+    const text = action.text ?? ''
+    t.action = { tag: action.tag, arg: action.arg ?? null, text }
+
+    if (action.outOfGame) {
+      t.codeNotes.push('Out-of-game input during stairway. The turn does not advance.')
+      return t
+    }
+
+    const isEarlyExit = action.tag === '이동'
+    if (isEarlyExit) {
+      r.bridgeTurns = 0
+      t.codeNotes.push('The PC chose to climb immediately. Skip remaining stairway moments and narrate entering the next floor.')
+    } else {
+      if (action.tag === '말') {
+        const ctx = newCtx('말')
+        this.check('말', D.dc['말'] ?? 9, 0, t, undefined, ctx)
+      } else if (action.tag === '동료') {
+        const nm = namedCompanion(action.arg, text)
+        const m = nm ? this.member(nm) : r.party.find(p => p.down)
+        if (m && m.down) {
+          m.down = false
+          m.injured = true
+          t.lines.push({ who: 'ally', text: `${josa(D.companions[m.id].name, '을', '를')} 일으켜 세웠다.` })
+          t.events.push({ type: 'companion_raised', id: m.id })
+        } else {
+          t.codeNotes.push('No companion needs to be raised right now.')
+        }
+      }
+      r.bridgeTurns = Math.max(0, (r.bridgeTurns ?? 2) - 1)
+    }
+
+    r.aid = 0
+
+    if ((r.bridgeTurns ?? 0) <= 0) {
+      r.bridgeTurns = 0
+      const target = r.bridgeTarget!
+      r.bridgeTarget = null
+      this.g.phase = 'mind'
+      this.enterRoom(target, t)
+      t.floorChanged = true
+    }
+
+    return t
   }
 
   /* ---------------- rewards ---------------- */
@@ -1145,7 +1197,14 @@ export class Engine {
     r.offer = null
     const dest = r.pendingMove
     r.pendingMove = null
-    this.enterRoom(dest, t)
+    if (r.party.length > 0) {
+      this.g.phase = 'floor_clear'
+      r.bridgeTurns = 2
+      r.bridgeTarget = dest
+      t.events.push({ type: 'floor_clear_start', target: dest })
+    } else {
+      this.enterRoom(dest, t)
+    }
     return t
   }
 
