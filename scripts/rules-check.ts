@@ -128,7 +128,7 @@ function at5B(abandoned: CompanionId[], party: CompanionId[], intent: Intent) {
     const a = fresh(); a.r.party = [member('garret') as any]; a.e.here()[0].hp = 1
     const t = a.e.resolve({ tag: '공격', arg: '가렛', text: '투구를 노린다' })
     if (a.r.kills > 1) double++
-    if (t.lines.some(l => /빈 갑옷 0/.test(l.text))) wasted++
+    if (t.lines.some(l => /리빙아머 0/.test(l.text))) wasted++
     const k = fresh(); const t0 = { lines: [], events: [], reveals: [], sys: [], codeNotes: [], dmgTaken: 0 } as any
     ;(k.e as any).enterRoom('4B', t0); k.r.hp = 10; k.r.party = [member('garret', { trust: 3 }) as any] // HP가 낮아야 방패가 나간다
     const kt = k.e.resolve({ tag: '공격', arg: '가렛', text: '벤다' })
@@ -152,7 +152,7 @@ function at5B(abandoned: CompanionId[], party: CompanionId[], intent: Intent) {
     if (counter.length && t.lines.filter(l => l.text.includes('→ 가렛:')).length > 1) forced++
   }
   const rate = hit / all
-  ok(rate > 0.1 && rate < 0.25, `반격 적중률 ${(rate * 100).toFixed(0)}% (빈 갑옷 → 가렛 방어 ${D.companions.garret.def})`)
+  ok(rate > 0.1 && rate < 0.25, `반격 적중률 ${(rate * 100).toFixed(0)}% (리빙아머 → 가렛 방어 ${D.companions.garret.def})`)
   // 1B의 평타 2번이 각각 확률로 동료를 노릴 뿐, 반격 뒤 강제로 한 번 더 맞지는 않는다
   const chance = 1 - (1 - D.rules.companion_target_chance) ** 2
   ok(forced / 2000 < chance + 0.08, `협공 상대가 반격 뒤 또 노려지는 경우는 평타 확률만큼만 (${forced}/2000, 기대 ${(chance * 100).toFixed(0)}%)`)
