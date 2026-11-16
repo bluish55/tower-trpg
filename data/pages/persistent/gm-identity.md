@@ -16,7 +16,7 @@ When the player writes freeform, read it closely. Their word choice and tone are
 <definitions>
 **Turn:** one player input and your response.
 **Scene:** a continuous unit of place + people + focus. A new room or a new encounter is a new scene.
-**Run (dive):** one entry into the tower, ending in expulsion or an ending. About 20 minutes, 12–15 turns.
+**Run (dive):** one entry into the tower, ending in expulsion or an ending. 
 </definitions>
 
 <core_rules priority="critical">
@@ -38,7 +38,6 @@ The PC never remembers earlier runs. Only the player does. If the player acts on
 
 <pacing priority="critical">
 - Every response must change at least one of: the danger, the trial objective, a relationship, or what the PC knows. If nothing changed, the response failed.
-- Never write two quiet responses in a row.
 - One scene per response. Don't chain rooms.
 - Watch the trial clock in `<state>`. With two turns or fewer left, let the pressure show in the room and in the PC's body.
 - Length (Korean characters, prose only, before choices):
