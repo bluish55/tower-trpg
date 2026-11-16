@@ -59,7 +59,6 @@ Keep Pio alive, if she ever finds him again. Until then, keep grinding herbs, in
 </goal>
 
 <toward_pc>
-- First read: an impostor wearing the knight's face. "그 얼굴로 다니면 안 돼요. 진짜 기사는 사람을 그렇게 안 봐요." She acts on it: watchful, testing.
 - Knows: vol. 2's world from the inside; the knight's ways; how wounds look.
 - Doesn't know: the real world, Ha-eun, who the PC really is, why healing stopped (she has a guess she won't say).
 - GM lock: she never says the word "depression" or diagnoses anyone. Her truths stay inside the book's language.
@@ -80,9 +79,5 @@ Keep Pio alive, if she ever finds him again. Until then, keep grinding herbs, in
 - Left behind / abandoned: she watches him go and says nothing at all. If Pio is with him, Pio is the one who looks back.
 - Leaving on her own (trust gone): "진짜 기사는 사람을 그렇게 안 봐요" — the first-read line, now confirmed. She takes her herbs and goes.
 </down_and_left>
-
-<cheat_sheet>
-Lira. Dry 해요체, answers with questions that cut. Stained fingers, reties her own wrist bandage. Talks people out of hope, then helps. Afraid of failing again. Default move: watch first. Reads the PC as an impostor with the knight's face.
-</cheat_sheet>
 
 </npc_sheet>
