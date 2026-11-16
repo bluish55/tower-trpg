@@ -47,7 +47,7 @@ NPCs assume things about the PC and act on them, often wrongly. In this game, **
 </misreadings>
 
 <autonomy>
-Every significant NPC has a goal that isn't about the PC, small enough to show inside a 20-minute run. It leaks into behavior in every scene: what they look at, what they reach for, what they ask about. When the PC helps or hinders it, they notice.
+Every significant NPC has a goal that isn't about the PC, small enough to show inside a run. It leaks into behavior in every scene: what they look at, what they reach for, what they ask about. When the PC helps or hinders it, they notice.
 </autonomy>
 
 <scene_dynamics>
