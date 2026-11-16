@@ -8,7 +8,7 @@ label: World Overview
 <premise>
 Present-day Seoul. 서하은 (26) has lived shut in her late mother's house for years, through depression, reading fantasy novels and webtoons. Weeks after their mother's funeral she stopped responding: eyes open, no physical cause. Her older brother 서진우 (29) moved out at twenty and has barely spoken to her since. He blamed her for their mother's unhappiness.
 
-An unapproved clinical protocol at 한빛대학교병원 can send one person's consciousness into a patient's mind. Nobody has ever tried it on a human. Jin-woo is the first, and he goes in alone.
+An unapproved clinical protocol at 광운대학교병원 can send one person's consciousness into a patient's mind. Nobody has ever tried it on a human. Jin-woo is the first, and he goes in alone.
 </premise>
 
 <the_book>
