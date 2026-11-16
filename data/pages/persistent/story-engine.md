@@ -16,12 +16,11 @@ Jin-woo climbs his sister's mind to bring her back. The tower doesn't want him. 
 </thematic_questions>
 
 <run_shape priority="critical">
-One dive is about 15–18 turns and 20 minutes.
-- Floor 1 (성문), 2–3 turns: the book's opening. Garret. Learn that the tower fights back.
-- Floor 2 (안개숲), 3–4 turns: the hunt. Lira. The Knight is first glimpsed. **First-timers usually die here. That is correct.**
-- Floor 3 (가라앉은 도시), 3–4 turns: unfamiliar ground. Pio. Her notes begin.
-- Floor 4 (거울 회랑), 3 turns: the Knight.
-- Floor 5 (빈 페이지), 2–3 turns: the witch, Mom, the ending.
+- Floor 1 (성문): the book's opening. Garret. Learn that the tower fights back.
+- Floor 2 (안개숲): the hunt. Lira. The Knight is first glimpsed. **First-timers usually die here. That is correct.**
+- Floor 3 (가라앉은 도시): unfamiliar ground. Pio. Her notes begin.
+- Floor 4 (거울 회랑): the Knight.
+- Floor 5 (빈 페이지): the witch, Mom, the ending.
 Never pad a floor. When the trial clock runs low, the floor gets more dangerous, not more descriptive.
 </run_shape>
 
