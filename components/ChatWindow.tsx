@@ -61,30 +61,14 @@ function Item({ item, gmSize }: { item: FeedItem; gmSize: string }) {
       )
     case 'sys':
       return <Notice n={item.notice} />
-    case 'gm': {
-      const paras = item.text.split(/\n+/).map(p => p.trim()).filter(Boolean)
-      // 이미지 삽입 위치: 캐릭터는 이름이 처음 등장하는 문단 뒤, 장소는 첫 문단 뒤
-      const IMAGE_NAME: Record<string, string> = {
-        '/images/garret.png': '가렛', '/images/lira.png': '리라', '/images/pio.png': '피오',
-        '/images/knight.png': '기사', '/images/witch.png': '하은', '/images/mom.png': '엄마',
-        '/images/jinu.png': '진우',
-      }
-      const keyword = item.image ? IMAGE_NAME[item.image] : undefined
-      const insertAfter = item.image
-        ? (keyword ? Math.max(0, paras.findIndex(p => p.includes(keyword))) : 0)
-        : -1
+    case 'image':
+      return item.imageKind === 'character'
+        ? <img src={item.src} alt="" className="ml-auto block w-3/4 rounded-lg opacity-90" />
+        : <img src={item.src} alt="" className="w-full rounded-lg object-contain opacity-90" />
+    case 'gm':
       return (
         <div className={`font-serif leading-[1.85] text-zinc-200 ${gmSize}`}>
-          {paras.map((p, i) => (
-            <>
-              <ProseParas key={i} paras={[p]} />
-              {item.image && i === insertAfter && (
-                item.imageKind === 'character'
-                  ? <img src={item.image} alt="" className="my-3 ml-auto block w-3/4 rounded-lg opacity-90" />
-                  : <img src={item.image} alt="" className="my-3 w-full rounded-lg object-contain opacity-90" />
-              )}
-            </>
-          ))}
+          <ProseParas paras={item.text.split(/\n+/).map(p => p.trim()).filter(Boolean)} />
           {item.notices && item.notices.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {item.notices.map((n, i) => (
@@ -94,7 +78,6 @@ function Item({ item, gmSize }: { item: FeedItem; gmSize: string }) {
           )}
         </div>
       )
-    }
   }
 }
 
@@ -116,7 +99,7 @@ export default function ChatWindow({ feed, loading, live, fontSize = 'md' }: { f
   return (
     <div className="flex flex-col gap-4">
       {feed.map((it, i) => <Item key={i} item={it} gmSize={gmSize} />)}
-      {live && <div className={`font-serif leading-[1.85] text-zinc-200 ${gmSize}`}><ProseParas paras={live.split(/\n+/).map(p => p.trim()).filter(Boolean)} /></div>}
+      {live && <div className={`font-serif leading-[1.85] text-zinc-200 ${gmSize}`}><ProseParas paras={[live]} /></div>}
       {loading && !live && <p className="animate-pulse text-sm text-zinc-500">탑이 이야기를 잇는 중…</p>}
       <div ref={endRef} />
     </div>

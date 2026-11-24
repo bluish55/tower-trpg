@@ -198,19 +198,62 @@ export default function TowerGame() {
   const narrate = useCallback(async (g: Game, t: Turn, playerText: string) => {
     const eng = new Engine(g)
     const msg = turnMessage(eng, t, playerText)
-    let raw = '', frame = 0
+
+    // 이미지 큐: 각 이미지와 삽입 트리거 키워드
+    type ImgEntry = { src: string; imageKind: 'character' | 'location'; keyword?: string }
+    const CNAME: Record<string, string> = { garret: '가렛', lira: '리라', pio: '피오' }
+    const imgQueue: ImgEntry[] = []
+    if (settingsRef.current.showImages) {
+      for (const e of t.events) {
+        if (e.type === 'dive_outside') imgQueue.push({ src: '/images/diveroom.png', imageKind: 'location' })
+        else if (e.type === 'enter_tower') imgQueue.push({ src: '/images/jinu.png', imageKind: 'character', keyword: '성문' })
+        else if (e.type === 'dive_start') imgQueue.push({ src: '/images/floor1.png', imageKind: 'location' })
+        else if (e.type === 'companion_join') imgQueue.push({ src: `/images/${e.id}.png`, imageKind: 'character', keyword: CNAME[e.id] })
+        else if (e.type === 'knight_confront') imgQueue.push({ src: '/images/knight.png', imageKind: 'character', keyword: '기사' })
+        else if (e.type === 'witch') imgQueue.push({ src: '/images/witch.png', imageKind: 'character', keyword: '하은' })
+        else if (e.type === 'floor5') imgQueue.push({ src: '/images/mom.png', imageKind: 'character', keyword: '엄마' })
+        else if (e.type === 'floor_clear_start') imgQueue.push({ src: '/images/stairs.png', imageKind: 'location' })
+      }
+      if (t.floorChanged && g.run.floor >= 2 && g.run.floor <= 4)
+        imgQueue.push({ src: `/images/floor${g.run.floor}.png`, imageKind: 'location' })
+    }
+    const done = new Set<number>()
+    let firstParaDone = false
+    const tryInsert = (para: string) => {
+      imgQueue.forEach((img, i) => {
+        if (done.has(i)) return
+        if (!img.keyword && !firstParaDone) { g.feed.push({ type: 'image', src: img.src, imageKind: img.imageKind }); done.add(i) }
+        else if (img.keyword && para.includes(img.keyword)) { g.feed.push({ type: 'image', src: img.src, imageKind: img.imageKind }); done.add(i) }
+      })
+      firstParaDone = true
+    }
+
+    // 문단 단위 스트리밍: \n\n 경계로 완성된 문단을 즉시 피드에 추가
+    let raw = '', frame = 0, flushedCount = 0
+    const isProse = (s: string) => !!s.trim() && !s.trim().startsWith('<') && !/^\d+\./.test(s.trim())
     const j = await postStream('/api/gm', {
       pages: dynamicPages(eng, t),
       messages: [...g.history, { role: 'user', content: msg }],
     }, delta => {
       raw += delta
-      // 화면은 프레임당 한 번만 갱신한다
-      frame ||= requestAnimationFrame(() => { frame = 0; setLive(liveProse(raw)) })
+      const parts = raw.split('\n\n')
+      if (parts.length - 1 > flushedCount) {
+        let changed = false
+        for (let i = flushedCount; i < parts.length - 1; i++) {
+          const para = parts[i].trim()
+          if (isProse(para)) { g.feed.push({ type: 'gm', text: para }); tryInsert(para); changed = true }
+          flushedCount++
+        }
+        if (changed) commit(g)
+      }
+      // live: 현재 타이핑 중인 불완전한 문단만 표시
+      frame ||= requestAnimationFrame(() => { frame = 0; setLive(liveProse(parts[parts.length - 1])) })
     }).finally(() => {
       cancelAnimationFrame(frame)
       frame = 0
       setLive('')
     })
+
     const p = parseResponse(String(j.output ?? ''))
     setDebug({ pages: j.pages ?? [], user: msg, raw: j.output ?? '', usage: j.usage })
     const notices = eng.applyAITags(p)
@@ -220,23 +263,20 @@ export default function TowerGame() {
       { role: 'assistant', content: p.prose + (p.choices.length ? '\n\n' + p.choices.map(choiceLine).join('\n') : '') },
     )
     if (g.history.length > HISTORY_LIMIT) g.history.splice(0, g.history.length - HISTORY_KEEP)
-    const gmItem: Extract<(typeof g.feed)[number], { type: 'gm' }> = { type: 'gm', text: p.prose, notices }
-    if (settingsRef.current.showImages) {
-      for (const e of t.events) {
-        if (gmItem.image) break
-        if (e.type === 'dive_outside') { gmItem.image = '/images/diveroom.png'; gmItem.imageKind = 'location' }
-        else if (e.type === 'enter_tower') { gmItem.image = '/images/jinu.png'; gmItem.imageKind = 'character' }
-        else if (e.type === 'dive_start') { gmItem.image = '/images/floor1.png'; gmItem.imageKind = 'location' }
-        else if (e.type === 'companion_join') { gmItem.image = `/images/${e.id}.png`; gmItem.imageKind = 'character' }
-        else if (e.type === 'knight_confront') { gmItem.image = '/images/knight.png'; gmItem.imageKind = 'character' }
-        else if (e.type === 'witch') { gmItem.image = '/images/witch.png'; gmItem.imageKind = 'character' }
-        else if (e.type === 'floor5') { gmItem.image = '/images/mom.png'; gmItem.imageKind = 'character' }
-        else if (e.type === 'floor_clear_start') { gmItem.image = '/images/stairs.png'; gmItem.imageKind = 'location' }
+
+    // 스트리밍 중 못 받은 나머지 문단 처리 (마지막 문단은 \n\n 없이 끝남)
+    const allParas = p.prose.split('\n\n').map(s => s.trim()).filter(Boolean)
+    for (const para of allParas.slice(flushedCount)) { g.feed.push({ type: 'gm', text: para }); tryInsert(para) }
+
+    // 키워드 미발견 이미지는 맨 뒤에 삽입
+    imgQueue.forEach((img, i) => { if (!done.has(i)) g.feed.push({ type: 'image', src: img.src, imageKind: img.imageKind }) })
+
+    // notices는 마지막 gm 아이템에 붙임
+    if (notices?.length) {
+      for (let i = g.feed.length - 1; i >= 0; i--) {
+        const f = g.feed[i]; if (f.type === 'gm') { f.notices = notices; break }
       }
-      if (!gmItem.image && t.floorChanged && g.run.floor >= 2 && g.run.floor <= 4)
-        { gmItem.image = `/images/floor${g.run.floor}.png`; gmItem.imageKind = 'location' }
     }
-    g.feed.push(gmItem)
 
     const ending = t.events.find(e => e.type === 'ending')
     if (ending && ending.type === 'ending') {
@@ -293,8 +333,18 @@ export default function TowerGame() {
           if (g.dive === 1 && choice) {
             applyFirstEntry(g, t, choice.n, text)
             if (settingsRef.current.showImages) {
-              const last = g.feed.at(-1)
-              if (last?.type === 'gm') { last.image = '/images/jinu.png'; last.imageKind = 'character' }
+              const idx = g.feed.findLastIndex(f => f.type === 'gm')
+              if (idx >= 0 && g.feed[idx].type === 'gm') {
+                const full = (g.feed[idx] as { type: 'gm'; text: string }).text
+                const paras = full.split('\n\n').map(s => s.trim()).filter(Boolean)
+                const items: (typeof g.feed)[number][] = []
+                for (const para of paras) {
+                  items.push({ type: 'gm', text: para })
+                  if (para.includes('성문') || para.includes('금빛')) items.push({ type: 'image', src: '/images/jinu.png', imageKind: 'character' })
+                  if (para.includes('가렛이다')) items.push({ type: 'image', src: '/images/garret.png', imageKind: 'character' })
+                }
+                g.feed.splice(idx, 1, ...items)
+              }
             }
             setDebug(null)
             commit(g)
@@ -368,8 +418,15 @@ export default function TowerGame() {
     const g = structuredClone(g0)
     applyOpening(g)
     if (settingsRef.current.showImages) {
-      const last = g.feed.at(-1)
-      if (last?.type === 'gm') { last.image = '/images/diveroom.png'; last.imageKind = 'location' }
+      const idx = g.feed.findLastIndex(f => f.type === 'gm')
+      if (idx >= 0 && g.feed[idx].type === 'gm') {
+        const full = (g.feed[idx] as { type: 'gm'; text: string }).text
+        const paras = full.split('\n\n').map(s => s.trim()).filter(Boolean)
+        g.feed.splice(idx, 1, ...paras.flatMap((p, i) =>
+          i === 0 ? [{ type: 'gm' as const, text: p }, { type: 'image' as const, src: '/images/diveroom.png', imageKind: 'location' as const }]
+                  : [{ type: 'gm' as const, text: p }]
+        ))
+      }
     }
     setError(null)
     commit(g)
