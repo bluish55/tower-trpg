@@ -293,6 +293,10 @@ export default function TowerGame() {
           // 첫 다이브에 버튼을 누르면 고정 장면으로 바로 시작한다 (직접 입력은 AI가 서술)
           if (g.dive === 1 && choice) {
             applyFirstEntry(g, t, choice.n, text)
+            if (settingsRef.current.showImages) {
+              g.feed.push({ type: 'image', src: '/images/jinu.png' })
+              g.feed.push({ type: 'image', src: '/images/floor1.png' })
+            }
             setDebug(null)
             commit(g)
             return
@@ -364,6 +368,7 @@ export default function TowerGame() {
   const beginOpening = useCallback((g0: Game) => {
     const g = structuredClone(g0)
     applyOpening(g)
+    if (settingsRef.current.showImages) g.feed.push({ type: 'image', src: '/images/diveroom.png' })
     setError(null)
     commit(g)
   }, [commit])
