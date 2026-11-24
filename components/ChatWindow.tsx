@@ -70,8 +70,8 @@ function Item({ item, gmSize }: { item: FeedItem; gmSize: string }) {
           <ProseParas paras={[first]} />
           {item.image && (
             item.imageKind === 'character'
-              ? <img src={item.image} alt="" className="my-3 ml-auto block w-36 rounded-lg opacity-90 sm:w-44" />
-              : <img src={item.image} alt="" className="my-3 w-full rounded-lg object-cover opacity-90" style={{ maxHeight: '160px' }} />
+              ? <img src={item.image} alt="" className="my-3 ml-auto block w-1/2 rounded-lg opacity-90 sm:w-56" />
+              : <img src={item.image} alt="" className="my-3 w-full rounded-lg object-contain opacity-90" />
           )}
           {rest.length > 0 && <ProseParas paras={rest} />}
           {item.notices && item.notices.length > 0 && (
