@@ -81,8 +81,4 @@ Guard the notes. Keep writing them as they come to him, and keep anyone from era
 - Leaving on his own (trust gone): "역시." One word. Gone into a flooded alley no one else can see.
 </down_and_left>
 
-<cheat_sheet>
-Pio, ~12. Fast rude 반말, "~잖아". Barefoot, spins a ring of lockpicks. Attacks before he can be hurt. Afraid of being left again. Default move: insult, then help. Knows exactly who the PC is and hates him for leaving.
-</cheat_sheet>
-
 </npc_sheet>
