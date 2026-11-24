@@ -63,17 +63,28 @@ function Item({ item, gmSize }: { item: FeedItem; gmSize: string }) {
       return <Notice n={item.notice} />
     case 'gm': {
       const paras = item.text.split(/\n+/).map(p => p.trim()).filter(Boolean)
-      const first = paras[0] ?? ''
-      const rest = paras.slice(1)
+      // 이미지 삽입 위치: 캐릭터는 이름이 처음 등장하는 문단 뒤, 장소는 첫 문단 뒤
+      const IMAGE_NAME: Record<string, string> = {
+        '/images/garret.png': '가렛', '/images/lira.png': '리라', '/images/pio.png': '피오',
+        '/images/knight.png': '기사', '/images/witch.png': '하은', '/images/mom.png': '엄마',
+        '/images/jinu.png': '진우',
+      }
+      const keyword = item.image ? IMAGE_NAME[item.image] : undefined
+      const insertAfter = item.image
+        ? (keyword ? Math.max(0, paras.findIndex(p => p.includes(keyword))) : 0)
+        : -1
       return (
         <div className={`font-serif leading-[1.85] text-zinc-200 ${gmSize}`}>
-          <ProseParas paras={[first]} />
-          {item.image && (
-            item.imageKind === 'character'
-              ? <img src={item.image} alt="" className="my-3 ml-auto block w-1/2 rounded-lg opacity-90 sm:w-56" />
-              : <img src={item.image} alt="" className="my-3 w-full rounded-lg object-contain opacity-90" />
-          )}
-          {rest.length > 0 && <ProseParas paras={rest} />}
+          {paras.map((p, i) => (
+            <>
+              <ProseParas key={i} paras={[p]} />
+              {item.image && i === insertAfter && (
+                item.imageKind === 'character'
+                  ? <img src={item.image} alt="" className="my-3 ml-auto block w-3/4 rounded-lg opacity-90" />
+                  : <img src={item.image} alt="" className="my-3 w-full rounded-lg object-contain opacity-90" />
+              )}
+            </>
+          ))}
           {item.notices && item.notices.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {item.notices.map((n, i) => (
