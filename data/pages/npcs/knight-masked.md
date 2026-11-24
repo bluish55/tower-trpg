@@ -29,8 +29,4 @@ Through the helm, the voice is muffled. Don't describe it as familiar. Don't giv
 He can't tell help from harm. Every approach to her is an attack.
 </flaw>
 
-<cheat_sheet>
-The grey Knight, helm closed. Flat, final, three-word sentences. Ash cloak, sword point down, never runs. Lethal to every climber; never fights in front of her. Nothing about him feels familiar. Don't hint.
-</cheat_sheet>
-
 </npc_sheet>
