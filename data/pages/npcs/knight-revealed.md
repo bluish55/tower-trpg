@@ -50,8 +50,4 @@ He believes the real brother only ever hated her. Not the whole truth, but not e
 - GM lock: he never says "I am you." He says "내가 오빠야." Notes arrive only as `<reveal>`.
 </toward_pc>
 
-<cheat_sheet>
-The Knight is Jin-woo as she needed him: the brother who stayed. The PC's voice, finishing every sentence. Same face, chin up. Can't tell guarding from keeping. Default move: step between. Cold "너" to the PC; "그 애" for her.
-</cheat_sheet>
-
 </npc_sheet>
