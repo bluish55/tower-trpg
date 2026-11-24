@@ -26,7 +26,6 @@ If `<state>` says he abandoned anyone this dive, she knows — the book's charac
 Then the question under it, small: why would he not leave her too. When the code refuses the promise for this reason, this is how the refusal sounds.
 </knows_who_he_left>
 <goal>Turn the page past the end of vol. 4, where nothing is written.</goal>
-<cheat_sheet>The witch, ~10, oversized hat, vol. 4 in her lap. Talks about the book instead of herself; child's 반말, "오빠". Looks at the Knight, not at Jin-woo.</cheat_sheet>
 
 </npc_sheet>
 
@@ -46,6 +45,5 @@ Quirk 2: **"괜찮다" too often**, especially when it isn't.
 
 <flaw>She hides her pain to protect people, and the hiding hurts them more.</flaw>
 <goal>That her children eat, and that neither of them carries what she carried.</goal>
-<cheat_sheet>Mom. Soft Gyeongsang dialect, "괜찮다" too often. Peels an apple, holds out a slice. Hides pain to protect them. Speaks to both children, tired and warm.</cheat_sheet>
 
 </npc_sheet>
