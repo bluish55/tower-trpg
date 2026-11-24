@@ -220,24 +220,23 @@ export default function TowerGame() {
       { role: 'assistant', content: p.prose + (p.choices.length ? '\n\n' + p.choices.map(choiceLine).join('\n') : '') },
     )
     if (g.history.length > HISTORY_LIMIT) g.history.splice(0, g.history.length - HISTORY_KEEP)
-    g.feed.push({ type: 'gm', text: p.prose, notices })
-
+    const gmItem: Extract<(typeof g.feed)[number], { type: 'gm' }> = { type: 'gm', text: p.prose, notices }
     if (settingsRef.current.showImages) {
-      const imgs: string[] = []
       for (const e of t.events) {
-        if (e.type === 'dive_outside') imgs.push('/images/diveroom.png')
-        else if (e.type === 'enter_tower') { imgs.push('/images/jinu.png'); imgs.push('/images/floor1.png') }
-        else if (e.type === 'dive_start') imgs.push('/images/floor1.png')
-        else if (e.type === 'companion_join') imgs.push(`/images/${e.id}.png`)
-        else if (e.type === 'knight_confront') imgs.push('/images/knight.png')
-        else if (e.type === 'witch') imgs.push('/images/witch.png')
-        else if (e.type === 'floor5') imgs.push('/images/mom.png')
-        else if (e.type === 'floor_clear_start') imgs.push('/images/stairs.png')
+        if (gmItem.image) break
+        if (e.type === 'dive_outside') { gmItem.image = '/images/diveroom.png'; gmItem.imageKind = 'location' }
+        else if (e.type === 'enter_tower') { gmItem.image = '/images/jinu.png'; gmItem.imageKind = 'character' }
+        else if (e.type === 'dive_start') { gmItem.image = '/images/floor1.png'; gmItem.imageKind = 'location' }
+        else if (e.type === 'companion_join') { gmItem.image = `/images/${e.id}.png`; gmItem.imageKind = 'character' }
+        else if (e.type === 'knight_confront') { gmItem.image = '/images/knight.png'; gmItem.imageKind = 'character' }
+        else if (e.type === 'witch') { gmItem.image = '/images/witch.png'; gmItem.imageKind = 'character' }
+        else if (e.type === 'floor5') { gmItem.image = '/images/mom.png'; gmItem.imageKind = 'character' }
+        else if (e.type === 'floor_clear_start') { gmItem.image = '/images/stairs.png'; gmItem.imageKind = 'location' }
       }
-      if (t.floorChanged && g.run.floor >= 2 && g.run.floor <= 4)
-        imgs.push(`/images/floor${g.run.floor}.png`)
-      imgs.forEach(src => g.feed.push({ type: 'image', src }))
+      if (!gmItem.image && t.floorChanged && g.run.floor >= 2 && g.run.floor <= 4)
+        { gmItem.image = `/images/floor${g.run.floor}.png`; gmItem.imageKind = 'location' }
     }
+    g.feed.push(gmItem)
 
     const ending = t.events.find(e => e.type === 'ending')
     if (ending && ending.type === 'ending') {
@@ -294,8 +293,8 @@ export default function TowerGame() {
           if (g.dive === 1 && choice) {
             applyFirstEntry(g, t, choice.n, text)
             if (settingsRef.current.showImages) {
-              g.feed.push({ type: 'image', src: '/images/jinu.png' })
-              g.feed.push({ type: 'image', src: '/images/floor1.png' })
+              const last = g.feed.at(-1)
+              if (last?.type === 'gm') { last.image = '/images/jinu.png'; last.imageKind = 'character' }
             }
             setDebug(null)
             commit(g)
@@ -368,7 +367,10 @@ export default function TowerGame() {
   const beginOpening = useCallback((g0: Game) => {
     const g = structuredClone(g0)
     applyOpening(g)
-    if (settingsRef.current.showImages) g.feed.push({ type: 'image', src: '/images/diveroom.png' })
+    if (settingsRef.current.showImages) {
+      const last = g.feed.at(-1)
+      if (last?.type === 'gm') { last.image = '/images/diveroom.png'; last.imageKind = 'location' }
+    }
     setError(null)
     commit(g)
   }, [commit])

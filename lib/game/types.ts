@@ -193,11 +193,10 @@ export interface Choice {
 
 export type FeedItem =
   | { type: 'player'; text: string }
-  | { type: 'gm'; text: string; notices?: SysNotice[] }
+  | { type: 'gm'; text: string; notices?: SysNotice[]; image?: string; imageKind?: 'character' | 'location' }
   | { type: 'strip'; lines: TurnLine[] }
   | { type: 'sys'; notice: SysNotice }
   | { type: 'divider'; text: string }
-  | { type: 'image'; src: string }
 
 export interface RunSummary {
   dive: number; cause: string; maxFloor: number; turns: number

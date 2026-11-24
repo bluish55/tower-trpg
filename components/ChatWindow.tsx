@@ -15,9 +15,7 @@ const KIND_STYLE: Record<SysNotice['kind'], string> = {
   info: 'border-zinc-600 bg-zinc-900/60',
 }
 
-/** **굵게** 정도만 허용하는 아주 작은 렌더러 (HTML은 넣지 않는다) */
-function Prose({ text }: { text: string }) {
-  const paras = text.split(/\n+/).map(p => p.trim()).filter(Boolean)
+function ProseParas({ paras }: { paras: string[] }) {
   return (
     <>
       {paras.map((p, i) => (
@@ -44,8 +42,6 @@ function Notice({ n }: { n: SysNotice }) {
 
 function Item({ item, gmSize }: { item: FeedItem; gmSize: string }) {
   switch (item.type) {
-    case 'image':
-      return <img src={item.src} alt="" className="w-full rounded-lg object-contain opacity-90" />
     case 'player':
       return <div className="ml-auto max-w-[85%] rounded-lg bg-zinc-800/80 px-3 py-2 text-sm text-zinc-200">{item.text}</div>
     case 'divider':
@@ -65,10 +61,19 @@ function Item({ item, gmSize }: { item: FeedItem; gmSize: string }) {
       )
     case 'sys':
       return <Notice n={item.notice} />
-    case 'gm':
+    case 'gm': {
+      const paras = item.text.split(/\n+/).map(p => p.trim()).filter(Boolean)
+      const first = paras[0] ?? ''
+      const rest = paras.slice(1)
       return (
         <div className={`font-serif leading-[1.85] text-zinc-200 ${gmSize}`}>
-          <Prose text={item.text} />
+          <ProseParas paras={[first]} />
+          {item.image && (
+            item.imageKind === 'character'
+              ? <img src={item.image} alt="" className="my-3 ml-auto block w-36 rounded-lg opacity-90 sm:w-44" />
+              : <img src={item.image} alt="" className="my-3 w-full rounded-lg object-cover opacity-90" style={{ maxHeight: '160px' }} />
+          )}
+          {rest.length > 0 && <ProseParas paras={rest} />}
           {item.notices && item.notices.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {item.notices.map((n, i) => (
@@ -78,6 +83,7 @@ function Item({ item, gmSize }: { item: FeedItem; gmSize: string }) {
           )}
         </div>
       )
+    }
   }
 }
 
@@ -99,7 +105,7 @@ export default function ChatWindow({ feed, loading, live, fontSize = 'md' }: { f
   return (
     <div className="flex flex-col gap-4">
       {feed.map((it, i) => <Item key={i} item={it} gmSize={gmSize} />)}
-      {live && <div className={`font-serif leading-[1.85] text-zinc-200 ${gmSize}`}><Prose text={live} /></div>}
+      {live && <div className={`font-serif leading-[1.85] text-zinc-200 ${gmSize}`}><ProseParas paras={live.split(/\n+/).map(p => p.trim()).filter(Boolean)} /></div>}
       {loading && !live && <p className="animate-pulse text-sm text-zinc-500">탑이 이야기를 잇는 중…</p>}
       <div ref={endRef} />
     </div>
