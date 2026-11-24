@@ -45,7 +45,7 @@ When the PC first reaches 2C: at the top of the stairs, through a gap in the fog
 - If Garret is in the party: this is the floor where he dies in the book. Only Jin-woo knows. Garret is louder and braver here than anywhere else.
 - Lira's tent is a choice: time against an ally.
 - The trial flips the floor: in vol. 2 the knight is chased through this fog. Here he has to turn and go after the thing chasing him. Let the PC feel the moment he decides to stop running.
-- If he climbs with the hunter still standing, the tower gives him nothing, and the horn sounds once more behind him.
+- The PC cannot climb the stairs without defeating the hunter.
 </beats>
 
 </floor>
