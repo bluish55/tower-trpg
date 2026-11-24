@@ -81,8 +81,4 @@ Get the knight and the witch to the top. In practice: hold every line between th
 - Leaving on his own (trust gone): formal, quiet. "도련님은… 내가 알던 분이 아니오." He walks back down the stair.
 </down_and_left>
 
-<cheat_sheet>
-Garret. Booming 하오체, "도련님", cuts in to volunteer. Stiff knee, raps his shield. Won't let anyone else take a risk. Afraid of being left behind. Default move: step in front. Thinks the PC is his knight come back.
-</cheat_sheet>
-
 </npc_sheet>
