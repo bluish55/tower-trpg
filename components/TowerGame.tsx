@@ -186,22 +186,6 @@ export default function TowerGame() {
 
   /* ---------------- 턴 처리 ---------------- */
   const showResolution = useCallback((g: Game, t: Turn) => {
-    if (settingsRef.current.showImages) {
-      const imgs: string[] = []
-      for (const e of t.events) {
-        if (e.type === 'dive_outside') imgs.push('/images/diveroom.png')
-        else if (e.type === 'enter_tower') { imgs.push('/images/jinu.png'); imgs.push('/images/floor1.png') }
-        else if (e.type === 'dive_start') imgs.push('/images/floor1.png')
-        else if (e.type === 'companion_join') imgs.push(`/images/${e.id}.png`)
-        else if (e.type === 'knight_confront') imgs.push('/images/knight.png')
-        else if (e.type === 'witch') imgs.push('/images/witch.png')
-        else if (e.type === 'floor5') imgs.push('/images/mom.png')
-        else if (e.type === 'floor_clear_start') imgs.push('/images/stairs.png')
-      }
-      if (t.floorChanged && g.run.floor >= 2 && g.run.floor <= 4)
-        imgs.push(`/images/floor${g.run.floor}.png`)
-      imgs.forEach(src => g.feed.push({ type: 'image', src }))
-    }
     if (t.lines.length) g.feed.push({ type: 'strip', lines: t.lines })
     t.sys.forEach(n => g.feed.push({ type: 'sys', notice: n }))
     commit(g) // 판정은 서술을 기다리지 않고 바로 보인다
@@ -237,6 +221,23 @@ export default function TowerGame() {
     )
     if (g.history.length > HISTORY_LIMIT) g.history.splice(0, g.history.length - HISTORY_KEEP)
     g.feed.push({ type: 'gm', text: p.prose, notices })
+
+    if (settingsRef.current.showImages) {
+      const imgs: string[] = []
+      for (const e of t.events) {
+        if (e.type === 'dive_outside') imgs.push('/images/diveroom.png')
+        else if (e.type === 'enter_tower') { imgs.push('/images/jinu.png'); imgs.push('/images/floor1.png') }
+        else if (e.type === 'dive_start') imgs.push('/images/floor1.png')
+        else if (e.type === 'companion_join') imgs.push(`/images/${e.id}.png`)
+        else if (e.type === 'knight_confront') imgs.push('/images/knight.png')
+        else if (e.type === 'witch') imgs.push('/images/witch.png')
+        else if (e.type === 'floor5') imgs.push('/images/mom.png')
+        else if (e.type === 'floor_clear_start') imgs.push('/images/stairs.png')
+      }
+      if (t.floorChanged && g.run.floor >= 2 && g.run.floor <= 4)
+        imgs.push(`/images/floor${g.run.floor}.png`)
+      imgs.forEach(src => g.feed.push({ type: 'image', src }))
+    }
 
     const ending = t.events.find(e => e.type === 'ending')
     if (ending && ending.type === 'ending') {
