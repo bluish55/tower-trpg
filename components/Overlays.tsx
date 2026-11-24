@@ -261,6 +261,15 @@ export function SettingsOverlay({ initial, onSave, onCancel }: {
         <input type="checkbox" checked={s.debug} onChange={e => setS({ ...s, debug: e.target.checked })} />
         디버그 패널 보기 (상태 · 보낸 프롬프트 · AI 원문)
       </label>
+      <label className="mt-5 block text-xs text-zinc-500">글자 크기</label>
+      <div className="mt-1 flex gap-2">
+        {(['sm', 'md', 'lg'] as const).map(v => (
+          <button key={v} onClick={() => setS({ ...s, fontSize: v })}
+            className={`flex-1 rounded-md border py-2 text-sm ${s.fontSize === v ? 'border-cyan-600 bg-cyan-900/40 text-cyan-200' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>
+            {v === 'sm' ? '작게' : v === 'md' ? '보통' : '크게'}
+          </button>
+        ))}
+      </div>
       <div className="mt-6 flex justify-end gap-2">
         <Ghost onClick={onCancel}>취소</Ghost>
         <Primary onClick={() => onSave(s)}>저장</Primary>

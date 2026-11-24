@@ -492,7 +492,7 @@ export default function TowerGame() {
       <div className={`mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[1fr_280px] ${hit === 'big' ? 'animate-[shake_.4s]' : ''}`}>
         <section className="flex min-w-0 flex-col gap-5">
           {mobileStatus && <div className="lg:hidden"><StatusPanel game={game} /></div>}
-          <ChatWindow feed={game.feed} loading={busy} live={live} />
+          <ChatWindow feed={game.feed} loading={busy} live={live} fontSize={settings.fontSize} />
 
           {error && (
             <div ref={errorRef} className="rounded-md border border-red-800 bg-red-950/40 p-3 text-sm">

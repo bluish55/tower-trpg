@@ -6,8 +6,8 @@ const SAVE_KEY = 'tower_save_v3'
 const ARCHIVE_KEY = 'tower_archive_v3'
 const SETTINGS_KEY = 'tower_settings_v3'
 
-export interface Settings { apiKey: string; model: string; remember: boolean; debug: boolean }
-export const DEFAULT_SETTINGS: Settings = { apiKey: '', model: '', remember: false, debug: false }
+export interface Settings { apiKey: string; model: string; remember: boolean; debug: boolean; fontSize: 'sm' | 'md' | 'lg' }
+export const DEFAULT_SETTINGS: Settings = { apiKey: '', model: '', remember: false, debug: false, fontSize: 'md' }
 
 function safe<T>(fn: () => T, fallback: T): T {
   try { return fn() } catch { return fallback }

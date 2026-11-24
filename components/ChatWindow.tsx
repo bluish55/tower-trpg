@@ -42,7 +42,7 @@ function Notice({ n }: { n: SysNotice }) {
   )
 }
 
-function Item({ item }: { item: FeedItem }) {
+function Item({ item, gmSize }: { item: FeedItem; gmSize: string }) {
   switch (item.type) {
     case 'player':
       return <div className="ml-auto max-w-[85%] rounded-lg bg-zinc-800/80 px-3 py-2 text-sm text-zinc-200">{item.text}</div>
@@ -65,7 +65,7 @@ function Item({ item }: { item: FeedItem }) {
       return <Notice n={item.notice} />
     case 'gm':
       return (
-        <div className="font-serif text-[15.5px] leading-[1.85] text-zinc-200">
+        <div className={`font-serif leading-[1.85] text-zinc-200 ${gmSize}`}>
           <Prose text={item.text} />
           {item.notices && item.notices.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
@@ -79,7 +79,10 @@ function Item({ item }: { item: FeedItem }) {
   }
 }
 
-export default function ChatWindow({ feed, loading, live }: { feed: FeedItem[]; loading: boolean; live: string }) {
+const FONT_SIZE = { sm: 'text-[13.5px]', md: 'text-[15.5px]', lg: 'text-[18px]' }
+
+export default function ChatWindow({ feed, loading, live, fontSize = 'md' }: { feed: FeedItem[]; loading: boolean; live: string; fontSize?: 'sm' | 'md' | 'lg' }) {
+  const gmSize = FONT_SIZE[fontSize]
   const endRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -93,8 +96,8 @@ export default function ChatWindow({ feed, loading, live }: { feed: FeedItem[]; 
 
   return (
     <div className="flex flex-col gap-4">
-      {feed.map((it, i) => <Item key={i} item={it} />)}
-      {live && <div className="font-serif text-[15.5px] leading-[1.85] text-zinc-200"><Prose text={live} /></div>}
+      {feed.map((it, i) => <Item key={i} item={it} gmSize={gmSize} />)}
+      {live && <div className={`font-serif leading-[1.85] text-zinc-200 ${gmSize}`}><Prose text={live} /></div>}
       {loading && !live && <p className="animate-pulse text-sm text-zinc-500">탑이 이야기를 잇는 중…</p>}
       <div ref={endRef} />
     </div>
