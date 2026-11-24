@@ -44,6 +44,8 @@ function Notice({ n }: { n: SysNotice }) {
 
 function Item({ item, gmSize }: { item: FeedItem; gmSize: string }) {
   switch (item.type) {
+    case 'image':
+      return <img src={item.src} alt="" className="w-full rounded-lg object-cover opacity-90" style={{ maxHeight: '340px' }} />
     case 'player':
       return <div className="ml-auto max-w-[85%] rounded-lg bg-zinc-800/80 px-3 py-2 text-sm text-zinc-200">{item.text}</div>
     case 'divider':

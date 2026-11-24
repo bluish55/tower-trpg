@@ -261,6 +261,10 @@ export function SettingsOverlay({ initial, onSave, onCancel }: {
         <input type="checkbox" checked={s.debug} onChange={e => setS({ ...s, debug: e.target.checked })} />
         디버그 패널 보기 (상태 · 보낸 프롬프트 · AI 원문)
       </label>
+      <label className="mt-2 flex items-center gap-2 text-sm text-zinc-300">
+        <input type="checkbox" checked={s.showImages ?? true} onChange={e => setS({ ...s, showImages: e.target.checked })} />
+        인물 · 장소 이미지 표시
+      </label>
       <label className="mt-5 block text-xs text-zinc-500">글자 크기</label>
       <div className="mt-1 flex gap-2">
         {(['sm', 'md', 'lg'] as const).map(v => (

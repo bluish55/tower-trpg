@@ -197,6 +197,7 @@ export type FeedItem =
   | { type: 'strip'; lines: TurnLine[] }
   | { type: 'sys'; notice: SysNotice }
   | { type: 'divider'; text: string }
+  | { type: 'image'; src: string }
 
 export interface RunSummary {
   dive: number; cause: string; maxFloor: number; turns: number
