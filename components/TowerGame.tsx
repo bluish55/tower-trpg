@@ -279,7 +279,8 @@ export default function TowerGame() {
     for (const para of allParas.slice(flushedCount)) { g.feed.push({ type: 'gm', text: para }); tryInsert(para) }
 
     // 키워드 미발견 이미지는 맨 뒤에 삽입
-    imgQueue.forEach((img, i) => { if (!done.has(i)) g.feed.push({ type: 'image', src: img.src, imageKind: img.imageKind }) })
+    // keyword 없는 장소 이미지만 폴백 삽입 (캐릭터는 키워드 미발견 시 다음 턴으로 넘김)
+    imgQueue.forEach((img, i) => { if (!done.has(i) && !img.keyword) g.feed.push({ type: 'image', src: img.src, imageKind: img.imageKind }) })
 
     // notices는 마지막 gm 아이템에 붙임
     if (notices?.length) {
