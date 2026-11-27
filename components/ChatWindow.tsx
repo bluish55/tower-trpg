@@ -63,7 +63,7 @@ function Item({ item, gmSize }: { item: FeedItem; gmSize: string }) {
       return <Notice n={item.notice} />
     case 'image':
       return item.imageKind === 'character'
-        ? <img src={item.src} alt="" className="ml-auto block w-3/4 rounded-lg opacity-90" />
+        ? <img src={item.src} alt="" className="ml-auto block w-1/2 rounded-lg opacity-90" />
         : <img src={item.src} alt="" className="w-full rounded-lg object-contain opacity-90" />
     case 'gm':
       return (
