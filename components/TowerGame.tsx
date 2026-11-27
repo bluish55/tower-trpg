@@ -364,6 +364,9 @@ export default function TowerGame() {
                   }
                 }
                 g.feed.splice(idx, 1, ...items)
+                // 1층 장소 이미지: 첫 문단 뒤에 삽입
+                const firstGmIdx = g.feed.findIndex(f => f.type === 'gm')
+                if (firstGmIdx >= 0) g.feed.splice(firstGmIdx + 1, 0, { type: 'image', src: '/images/floor1.png', imageKind: 'location' })
               }
             }
             setDebug(null)
