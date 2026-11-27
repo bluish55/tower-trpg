@@ -174,6 +174,7 @@ export interface RunState {
   pendingRoomNote: Record<string, boolean> // 적이 남아 아직 못 읽은 방의 쪽지
   bridgeTurns: number      // floor_clear 남은 대화 턴 (0이면 비활성)
   bridgeTarget: string | null  // floor_clear 후 이동할 방 ID
+  shownCharImages: string[]    // 이번 회차에 이미 표시한 캐릭터 이미지 src
 }
 
 export interface Archive {

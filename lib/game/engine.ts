@@ -91,7 +91,7 @@ export function newRun(archive: Archive): RunState {
     kills: 0, damageTaken: 0, lastRangedUid: null, log: [],
     pages: 0, prone: false, aid: 0, foresight: false, slain: {},
     left: [], abandoned: [], trustCleared: {}, pendingRoomNote: {},
-    bridgeTurns: 0, bridgeTarget: null,
+    bridgeTurns: 0, bridgeTarget: null, shownCharImages: [],
   }
 }
 

@@ -87,14 +87,9 @@ export default function ChatWindow({ feed, loading, live, fontSize = 'md' }: { f
   const gmSize = FONT_SIZE[fontSize]
   const endRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
+    if (live) return  // 스트리밍 중엔 live 효과가 처리
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [feed.length, loading])
-  // 서술이 나오는 동안 아래를 따라가되, 플레이어가 위로 올려 읽는 중이면 끌어내리지 않는다
-  useEffect(() => {
-    if (!live) return
-    const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 200
-    if (nearBottom) endRef.current?.scrollIntoView({ block: 'end' })
-  }, [live])
+  }, [feed.length, loading, live])
 
   return (
     <div className="flex flex-col gap-4">

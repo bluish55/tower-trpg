@@ -28,6 +28,7 @@ export function loadGame(): Game | null {
     const r = g.run as Partial<typeof g.run> & typeof g.run
     r.pages ??= 0; r.prone ??= false; r.aid ??= 0; r.foresight ??= false; r.slain ??= {}
     r.left ??= []; r.abandoned ??= []; r.trustCleared ??= {}; r.pendingRoomNote ??= {}
+    r.shownCharImages ??= []
     if (r.trial) { r.trial.kind ??= 'reach'; r.trial.target ??= null }
     return g
   }, null)

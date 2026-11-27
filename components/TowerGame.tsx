@@ -199,23 +199,29 @@ export default function TowerGame() {
     const eng = new Engine(g)
     const msg = turnMessage(eng, t, playerText)
 
-    // 이미지 큐: 각 이미지와 삽입 트리거 키워드
+    // 이미지 큐: 장소(이벤트 기반) + 캐릭터(키워드 첫 등장 기반)
     type ImgEntry = { src: string; imageKind: 'character' | 'location'; keyword?: string }
-    const CNAME: Record<string, string> = { garret: '가렛', lira: '리라', pio: '피오' }
+    const CHAR_IMAGES: { src: string; keyword: string }[] = [
+      { src: '/images/jinu.png', keyword: '진우' },
+      { src: '/images/garret.png', keyword: '가렛' },
+      { src: '/images/lira.png', keyword: '리라' },
+      { src: '/images/pio.png', keyword: '피오' },
+      { src: '/images/knight.png', keyword: '기사' },
+      { src: '/images/witch.png', keyword: '하은' },
+      { src: '/images/mom.png', keyword: '엄마' },
+    ]
     const imgQueue: ImgEntry[] = []
     if (settingsRef.current.showImages) {
       for (const e of t.events) {
         if (e.type === 'dive_outside') imgQueue.push({ src: '/images/diveroom.png', imageKind: 'location' })
-        else if (e.type === 'enter_tower') imgQueue.push({ src: '/images/jinu.png', imageKind: 'character', keyword: '성문' })
         else if (e.type === 'dive_start') imgQueue.push({ src: '/images/floor1.png', imageKind: 'location' })
-        else if (e.type === 'companion_join') imgQueue.push({ src: `/images/${e.id}.png`, imageKind: 'character', keyword: CNAME[e.id] })
-        else if (e.type === 'knight_confront') imgQueue.push({ src: '/images/knight.png', imageKind: 'character', keyword: '기사' })
-        else if (e.type === 'witch') imgQueue.push({ src: '/images/witch.png', imageKind: 'character', keyword: '하은' })
-        else if (e.type === 'floor5') imgQueue.push({ src: '/images/mom.png', imageKind: 'character', keyword: '엄마' })
-        else if (e.type === 'floor_clear_start') imgQueue.push({ src: '/images/stairs.png', imageKind: 'location' })
       }
-      if (t.floorChanged && g.run.floor >= 2 && g.run.floor <= 4)
+      if (t.floorChanged && g.run.floor >= 2 && g.run.floor <= 5)
         imgQueue.push({ src: `/images/floor${g.run.floor}.png`, imageKind: 'location' })
+      // 아직 보여주지 않은 캐릭터만 키워드 대기
+      for (const c of CHAR_IMAGES)
+        if (!g.run.shownCharImages.includes(c.src))
+          imgQueue.push({ src: c.src, imageKind: 'character', keyword: c.keyword })
     }
     const done = new Set<number>()
     let firstParaDone = false
@@ -223,7 +229,11 @@ export default function TowerGame() {
       imgQueue.forEach((img, i) => {
         if (done.has(i)) return
         if (!img.keyword && !firstParaDone) { g.feed.push({ type: 'image', src: img.src, imageKind: img.imageKind }); done.add(i) }
-        else if (img.keyword && para.includes(img.keyword)) { g.feed.push({ type: 'image', src: img.src, imageKind: img.imageKind }); done.add(i) }
+        else if (img.keyword && para.includes(img.keyword)) {
+          g.feed.push({ type: 'image', src: img.src, imageKind: img.imageKind })
+          if (img.imageKind === 'character') g.run.shownCharImages.push(img.src)
+          done.add(i)
+        }
       })
       firstParaDone = true
     }
@@ -337,11 +347,20 @@ export default function TowerGame() {
               if (idx >= 0 && g.feed[idx].type === 'gm') {
                 const full = (g.feed[idx] as { type: 'gm'; text: string }).text
                 const paras = full.split('\n\n').map(s => s.trim()).filter(Boolean)
+                // 고정 텍스트용 캐릭터 맵: 진우는 '금빛' 예외, 나머지는 이름 그대로
+                const FIRST_ENTRY_CHARS: { src: string; keyword: string }[] = [
+                  { src: '/images/jinu.png', keyword: '금빛' },
+                  { src: '/images/garret.png', keyword: '가렛' },
+                ]
                 const items: (typeof g.feed)[number][] = []
                 for (const para of paras) {
                   items.push({ type: 'gm', text: para })
-                  if (para.includes('성문') || para.includes('금빛')) items.push({ type: 'image', src: '/images/jinu.png', imageKind: 'character' })
-                  if (para.includes('가렛이다')) items.push({ type: 'image', src: '/images/garret.png', imageKind: 'character' })
+                  for (const c of FIRST_ENTRY_CHARS) {
+                    if (para.includes(c.keyword) && !g.run.shownCharImages.includes(c.src)) {
+                      items.push({ type: 'image', src: c.src, imageKind: 'character' })
+                      g.run.shownCharImages.push(c.src)
+                    }
+                  }
                 }
                 g.feed.splice(idx, 1, ...items)
               }
